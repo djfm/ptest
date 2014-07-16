@@ -4,64 +4,70 @@ namespace PrestaShop\Ptest;
 
 class Runner
 {
-	private $known_classes;
+	protected $job_description_file;
+	protected $output_file;
+	protected $instance;
 
-	public function __construct($target)
+	public function __construct($job_description_file, $output_file, $bootstrap_file)
 	{
-		$this->known_classes = get_declared_classes();
-		$this->discoverTestClassesOnFileSystem($target);
+		$this->job_description_file = $job_description_file;
+		$this->job = json_decode(file_get_contents($this->job_description_file), true);
+		$this->output_file = $output_file;
+		$this->bootstrap_file = $bootstrap_file;
 	}
 
-	public function discoverTestClassesOnFileSystem($target)
+	private function makeInstance()
 	{
-		$rdi = new \RecursiveDirectoryIterator($target, \FilesystemIterator::SKIP_DOTS);
-		$rii = new \RecursiveIteratorIterator($rdi, \RecursiveIteratorIterator::CHILD_FIRST);
-		foreach($rii as $path => $file)
+		$class = '\\'.$this->job['class'];
+		if (!class_exists($class, false))
+			require_once $this->job['class_path'];
+
+		return new $class;
+	}
+
+	private function getInstance()
+	{
+		if (!$this->instance)
+			$this->instance = $this->makeInstance();
+		return $this->instance;
+	}
+
+	public function run()
+	{
+		if ($this->bootstrap_file)
 		{
-		    if (
-		    	$file->isFile() &&
-		    	$file->getExtension() === 'php' &&
-		    	preg_match('/Test$/', $file->getBaseName('.php'))
-		    )
-		    {
-		    	require $path;
-		    }
+			require $bootstrap_file;
 		}
-		$this->discoverLoadedClasess();
-	}
 
-	public function discoverLoadedClasess()
-	{
-		$loaded_classes = array_diff(get_declared_classes(), $this->known_classes);
+		require $this->job['class_path'];
 		
-		foreach ($loaded_classes as $class)
+		foreach ($this->job['methods'] as $method)
 		{
-			$rc = new \ReflectionClass($class);
-
-			$loaders = [];
-
-			foreach ($rc->getInterfaceNames() as $iface)
+			if (!isset($method['dataProvider']))
 			{
-				$loader_class = str_replace('\\TestClass\\', '\\Loader\\', $iface);
-				if (class_exists($loader_class))
-					$loaders[] = $loader_class;
+				$this->runTestMethod($method);
 			}
+			else
+			{
+				$obj = $this->getInstance();
+				$data = $obj->{$method['dataProvider']}();
+				
+				$n = 0;
+				foreach ($data as $arguments)
+				{
+					if ($n % (int)$method['dataProviderBatchCount'] === (int)$method['dataProviderBatch'])
+					{
+						$this->runTestMethod($method, $arguments);
+					}
 
-			if (count($loaders) === 0)
-				throw new \Exception(sprintf('No loader found for class %s.', $class));
-
-			if (count($loaders) > 1)
-				throw new \Exception(sprintf('Ambiguous loader for class %s. TestClasses must implement exactly one interface from PrestaShop\\Ptest\\TestClass.', $class));
-		
-			$loader = new $loaders[0];
-			$this->loadTestsFromClass($rc, $loader);
+					$n++;
+				}
+			}
 		}
-
-		$this->known_classes = get_declared_classes();
 	}
 
-	public function loadTestsFromClass(\ReflectionClass $rc, \PrestaShop\Ptest\Loader\LoaderInterface $loader)
+	public function runTestMethod($method, array $arguments = array())
 	{
-		$tests = $loader->loadTests($rc);
+		echo $method['method']."\n";
 	}
 }

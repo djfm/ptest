@@ -19,7 +19,9 @@ class Runner extends Command
                 'test_class_or_directory',
                 InputArgument::REQUIRED,
                 'Which test do you want to run?'
-            );
+            )
+            ->addOption('bootstrap', 'b', InputOption::VALUE_REQUIRED, 'Bootstrap file')
+            ->addOption('processes', 'p', InputOption::VALUE_REQUIRED, 'Maximum number of parallel processes');
         ;
     }
 
@@ -27,8 +29,14 @@ class Runner extends Command
     {
         $test_case = $input->getArgument('test_class_or_directory');
 
-        $runner = new \PrestaShop\Ptest\Runner($test_case);
+        $discoverer = new \PrestaShop\Ptest\Discoverer($test_case);
+        $test_plans = $discoverer->getTestPlans();
 
-        //$output->writeln($test_case);
+        $runner = new \PrestaShop\Ptest\RunnerManager($test_plans, [
+            'bootstrap_file' => $input->getOption('bootstrap'),
+            'max_processes' => $input->getOption('processes')
+        ]);
+
+        $runner->run();
     }
 }
