@@ -1,0 +1,10 @@
+{
+	"require": {
+		"symfony/console": "*"
+	},
+	"autoload": {
+		"psr-4": {
+			"PrestaShop\\Ptest\\": "src/"
+		}
+	}
+}
