@@ -23,6 +23,20 @@ class Runner
 		file_put_contents($this->output_file, json_encode($data)."\n", FILE_APPEND);
 	}
 
+	private function logException(\Exception $e, $step)
+	{
+		$this->log([
+			'type' => 'error',
+			'kind' => 'exception',
+			'exception_class' => get_class($e),
+			'step' => $step,
+			'message' => $e->getMessage(),
+			'file' => $e->getFile(),
+			'line' => $e->getLine(),
+			'trace' => $e->getTrace()
+		]);
+	}
+
 	private function makeInstance()
 	{
 		$class = '\\'.$this->job['class'];
@@ -107,6 +121,7 @@ class Runner
 				}
 			} catch (\Exception $e) {
 				$ok = false;
+				$this->logException($e, $name);
 			}
 		}
 
@@ -145,7 +160,7 @@ class Runner
 				$res = call_user_func_array([$obj, $name], $arguments);
 				$execution_ok = true;
 			} catch (\Exception $e) {
-				$status = 'E';
+				$this->logException($e, $test_name);
 			}
 		}
 
@@ -162,7 +177,7 @@ class Runner
 			elseif (!$execution_ok && $teardown_ok)
 				$status = 'E';
 			elseif (!$execution_ok && !$teardown_ok)
-				$status = 'X';
+				$status = 'x';
 		}
 		elseif (!$setup_ok)
 		{

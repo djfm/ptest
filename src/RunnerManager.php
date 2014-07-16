@@ -9,6 +9,7 @@ class RunnerManager
 	private $max_processes = 5;
 	private $running_processes = [];
 	private $stdout = [];
+	private $errors = [];
 
 	public function __construct(array $test_plans, array $options = array())
 	{
@@ -48,8 +49,33 @@ class RunnerManager
 	public function afterRun()
 	{
 		echo "\n";
+		
 		ksort($this->stdout);
+		ksort($this->errors);
+
+		$this->errors = call_user_func_array('array_merge', array_values($this->errors));
+
 		echo "\n".trim(implode("\n", $this->stdout))."\n";
+
+		if (count($this->errors) > 0)
+		{
+			echo sprintf("Oops! There were %d errors: \n\n", count($this->errors));
+		}
+
+		foreach ($this->errors as $n => $error)
+		{
+			echo sprintf("%d) %s\n", $n+1, $error['step']);
+			echo sprintf("\t%s\n", $error['message']);
+			if ($error['kind'] === 'exception')
+			{
+				echo sprintf("\tException `%s` (%s:%s): \n", $error['exception_class'], $error['file'], $error['line']);
+				foreach ($error['trace'] as $t)
+				{
+					print_r($t);
+				}
+			}
+			echo "\n";
+		}
 	}
 
 	public function startNewProcess()
@@ -118,6 +144,12 @@ class RunnerManager
 					if (isset($result['type']) && $result['type'] === 'result')
 					{
 						echo $result['status'];
+					}
+					elseif (isset($result['type']) && $result['type'] === 'error')
+					{
+						if (!isset($this->errors[$data['test_plan']->getPosition()]))
+							$this->errors[$data['test_plan']->getPosition()] = [];
+						$this->errors[$data['test_plan']->getPosition()][] = $result;
 					}
 				}
 
