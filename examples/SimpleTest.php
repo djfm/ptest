@@ -2,12 +2,16 @@
 
 class SimpleTest implements \PrestaShop\Ptest\TestClass\Basic
 {
+	public function beforeAll()
+	{
+	}
+
 	/**
 	* @parallel
 	*/
 	public function testStuffz()
 	{
-
+		throw new \Exception("OOPS");
 	}
 
 	/**
@@ -18,6 +22,10 @@ class SimpleTest implements \PrestaShop\Ptest\TestClass\Basic
 
 	}
 
+	public function beforeTestHello()
+	{
+		throw new \Exception('Grmbl!');
+	}
 	/**
 	* @parallel group 1
 	*/
@@ -37,7 +45,6 @@ class SimpleTest implements \PrestaShop\Ptest\TestClass\Basic
 
 	public function testFoo()
 	{
-
 	}
 
 	public function lotsOfData()

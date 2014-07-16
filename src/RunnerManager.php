@@ -8,10 +8,17 @@ class RunnerManager
 	private $bootstrap_file = null;
 	private $max_processes = 5;
 	private $running_processes = [];
+	private $stdout = [];
 
 	public function __construct(array $test_plans, array $options = array())
 	{
 		$this->test_plans = $test_plans;
+		
+		foreach ($test_plans as $n => $test_plan)
+		{
+			$test_plans[$n]->setPosition($n);
+		}
+
 		foreach (['bootstrap_file', 'max_processes'] as $option)
 		{
 			if (isset($options[$option]) && $options[$option])
@@ -34,6 +41,15 @@ class RunnerManager
 			if (count($this->test_plans) === 0 || count($this->running_processes) == $this->max_processes)
 				sleep(1);
 		}
+
+		$this->afterRun();
+	}
+
+	public function afterRun()
+	{
+		echo "\n";
+		ksort($this->stdout);
+		echo "\n".trim(implode("\n", $this->stdout))."\n";
 	}
 
 	public function startNewProcess()
@@ -94,10 +110,16 @@ class RunnerManager
 			$status = proc_get_status($data['proc']);
 			if ($status['running'] === false)
 			{
-				echo "Test $test_plan_file finished:\n";
-				echo file_get_contents($data['stdout_file']);
-				echo "\n\n";
+				$this->stdout[$data['test_plan']->getPosition()] = file_get_contents($data['stdout_file']);
 
+				foreach (explode("\n", file_get_contents($data['output_file'])) as $line)
+				{
+					$result = json_decode($line, true);
+					if (isset($result['type']) && $result['type'] === 'result')
+					{
+						echo $result['status'];
+					}
+				}
 
 				unset($this->running_processes[$test_plan_file]);
 			}

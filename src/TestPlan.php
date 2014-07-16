@@ -12,6 +12,7 @@ use \PrestaShop\Ptest\Util\DocCommentParser;
 class TestPlan
 {
 	protected $rc;
+	protected $position;
 	protected $group = '';
 	protected $methods = [];
 	protected $must_have_just_one_method = false;
@@ -51,5 +52,15 @@ class TestPlan
 			'group' => $this->group,
 			'methods' => array_values($this->methods)
 		], JSON_PRETTY_PRINT);
+	}
+
+	public function getPosition()
+	{
+		return $this->position;
+	}
+
+	public function setPosition($pos)
+	{
+		$this->position = $pos;
 	}
 }

@@ -7,6 +7,8 @@ class Runner
 	protected $job_description_file;
 	protected $output_file;
 	protected $instance;
+	protected $classsetup_ok = false;
+	protected $classteardown_ok = false;
 
 	public function __construct($job_description_file, $output_file, $bootstrap_file)
 	{
@@ -14,6 +16,11 @@ class Runner
 		$this->job = json_decode(file_get_contents($this->job_description_file), true);
 		$this->output_file = $output_file;
 		$this->bootstrap_file = $bootstrap_file;
+	}
+
+	private function log(array $data)
+	{
+		file_put_contents($this->output_file, json_encode($data)."\n", FILE_APPEND);
 	}
 
 	private function makeInstance()
@@ -39,7 +46,10 @@ class Runner
 			require $bootstrap_file;
 		}
 
-		require $this->job['class_path'];
+		$call_before = ['beforeAll', 'setUpBeforeClass', 'setupBeforeClass'];
+		$call_after = ['afterAll', 'tearDownAfterClass', 'tardownAfterClass'];
+
+		$this->classsetup_ok = $this->callMethods($call_before, true);
 		
 		foreach ($this->job['methods'] as $method)
 		{
@@ -64,10 +74,108 @@ class Runner
 				}
 			}
 		}
+
+		$this->classteardown_ok = $this->callMethods($call_after, true);
+	}
+
+	public function callMethods(array $names, $tryStaticFirst = false)
+	{
+		$ok = true;
+		$obj = $this->getInstance();
+		foreach ($names as $name)
+		{
+			try {
+				if ($tryStaticFirst)
+				{
+					$rc = new \ReflectionClass($obj);
+					if ($rc->hasMethod($name)) 
+					{
+						$m = $rc->getMethod($name);
+
+						if ($m->isPublic() && $m->isStatic())
+						{
+							$m->invoke();
+							continue;
+						}
+					}
+				}
+
+				$callable = [$obj, $name];
+				if (is_callable($callable))
+				{
+					call_user_func($callable);
+				}
+			} catch (\Exception $e) {
+				$ok = false;
+			}
+		}
+
+		return $ok;
 	}
 
 	public function runTestMethod($method, array $arguments = array())
 	{
-		echo $method['method']."\n";
+		$name = $method['method'];
+		$test_name = '\\'.$this->job['class'].'::'.$name;
+		if (count($arguments) > 0)
+			$test_name .= ' with data: '.json_encode($arguments);
+
+
+		if (!$this->classsetup_ok)
+		{
+			$this->log([
+				'test_name' => $test_name,
+				'type' => 'result',
+				'status' => 'B'
+			]);
+			return;
+		}
+
+		$call_before = ['beforeEach', 'setUp', 'setup', 'before'.ucfirst($name)];
+		$call_after = ['afterEach', 'tearDown', 'teardown', 'after'.ucfirst($name)];
+
+		$setup_ok = $this->callMethods($call_before, false);
+		$execution_ok = false;
+
+		$obj = $this->getInstance();
+
+		if ($setup_ok)
+		{
+			try {
+				$res = call_user_func_array([$obj, $name], $arguments);
+				$execution_ok = true;
+			} catch (\Exception $e) {
+				$status = 'E';
+			}
+		}
+
+		$teardown_ok = $this->callMethods($call_after, false);
+
+		$status = '?';
+
+		if ($setup_ok)
+		{
+			if ($execution_ok && $teardown_ok)
+				$status = '.';
+			elseif ($execution_ok && !$teardown_ok)
+				$status = 'a';
+			elseif (!$execution_ok && $teardown_ok)
+				$status = 'E';
+			elseif (!$execution_ok && !$teardown_ok)
+				$status = 'X';
+		}
+		elseif (!$setup_ok)
+		{
+			if ($teardown_ok)
+				$status = 'b';
+			elseif (!$teardown_ok)
+				$status = 'd';
+		}
+
+		$this->log([
+			'test_name' => $test_name,
+			'type' => 'result',
+			'status' => $status
+		]);
 	}
 }
