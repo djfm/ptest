@@ -37,8 +37,14 @@ class TestPlan
 			{
 				$settings['dataProviderBatch'] = $options['dataProviderBatch'];
 				$settings['dataProviderBatchCount'] = $options['dataProviderBatchCount'];
-				$must_have_just_one_method = true;
+				$this->must_have_just_one_method = true;
 			}
+		}
+
+
+		if ($expected_exception = $dcp->getOption('expectedException'))
+		{
+			$settings['expectedException'] = $expected_exception;
 		}
 
 		$this->methods[$m->getName()] = $settings;

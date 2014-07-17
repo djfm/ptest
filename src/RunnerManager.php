@@ -12,6 +12,7 @@ class RunnerManager
 	private $errors = [];
 	private $results = [];
 	private $test_token = 1;
+	private $started_at;
 
 	public function __construct(array $test_plans, array $options = array())
 	{
@@ -31,6 +32,8 @@ class RunnerManager
 
 	public function run()
 	{
+		$this->started_at = time();
+
 		while (count($this->test_plans) > 0 || count($this->running_processes) > 0)
 		{
 			if (count($this->test_plans) > 0 && count($this->running_processes) < $this->max_processes)
@@ -61,9 +64,15 @@ class RunnerManager
 		if (count($this->results) > 0)
 			$this->results = call_user_func_array('array_merge', $this->results);
 
-		foreach ($this->stdout as $position => $output)
+		$position = 1;
+		foreach ($this->stdout as $output)
 		{
-			echo sprintf("Output of TestPlan #%d:\n%s\n\n", $position + 1, $output);
+			$output = trim($output);
+			if ($output !== '')
+			{
+				echo sprintf("Output of TestPlan #%d:\n%s\n\n", $position, $output);
+			}
+			$position++;
 		}
 
 		if (count($this->errors) > 0)
@@ -82,10 +91,8 @@ class RunnerManager
 				{
 					if ($t['file'] && $t['line'])
 					{
-						$file = substr($t['file'], strlen(realpath(__DIR__.'/..')) + 1);
-
 						echo sprintf("\t\tat `%s:%s` in '%s%s%s'\n",
-							$file, $t['line'], $t['class'], $t['type'], $t['function']
+							$t['file'], $t['line'], $t['class'], $t['type'], $t['function']
 						);
 					}
 					else
@@ -105,7 +112,10 @@ class RunnerManager
 			echo $result['status'];
 		}
 		echo "\n";
-		echo sprintf("Tests: %d, Errors: %d\n", count($this->results), count($this->errors));
+		$elapsed = time() - $this->started_at;
+		$minutes = floor($elapsed / 60);
+		$seconds = $elapsed - 60 * $minutes;
+		echo sprintf("Tests: %d, Errors: %d, Time: %dm:%ds\n", count($this->results), count($this->errors), $minutes, $seconds);
 
 		echo "\n";
 	}

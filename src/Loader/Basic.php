@@ -28,7 +28,7 @@ class Basic implements LoaderInterface
 					$dcp->hasOption('test')
 				)
 				{
-					$group = $dcp->getOption('parallel', $method->getName());
+					$group = $dcp->getOption('parallel', 'default');
 
 					if ($dcp->getOption('dataProvider') && $dcp->getOption('parallelize', 1) > 1)
 					{

@@ -164,7 +164,18 @@ class Runner
 				$res = call_user_func_array([$obj, $name], $arguments);
 				$execution_ok = true;
 			} catch (\Exception $e) {
-				$this->logException($e, $test_name);
+				if (isset($method['expectedException']))
+				{
+					echo "Expected exception: {$method['expectedException']}\n";
+				}
+				if (isset($method['expectedException']) && ($e instanceof $method['expectedException']))
+				{
+					$execution_ok = true;
+				}
+				else
+				{
+					$this->logException($e, $test_name);
+				}
 			}
 		}
 
