@@ -1,4 +1,5 @@
 {
+	"name": "djfm/ptest",
 	"require": {
 		"symfony/console": "*"
 	},
