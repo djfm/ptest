@@ -112,7 +112,6 @@ class Runner
 
 						if ($m->isPublic() && $m->isStatic())
 						{
-							echo "Calling (static) $name\n";
 							$m->invoke(null);
 							continue;
 						}
@@ -122,7 +121,6 @@ class Runner
 				$callable = [$obj, $name];
 				if (is_callable($callable))
 				{
-					echo "Calling $name\n";
 					call_user_func($callable);
 				}
 			} catch (\Exception $e) {
