@@ -11,6 +11,7 @@ class RunnerManager
 	private $stdout = [];
 	private $errors = [];
 	private $results = [];
+	private $test_token = 1;
 
 	public function __construct(array $test_plans, array $options = array())
 	{
@@ -143,8 +144,9 @@ class RunnerManager
 			return escapeshellcmd($arg);
 		}, $command_parts));
 
-		//echo $command."\n"; die();
-		$res = proc_open($command, $io, $pipes);
+		$res = proc_open($command, $io, $pipes, null, ['TEST_TOKEN' => $this->test_token]);
+
+		$this->test_token++;
 
 		$this->running_processes[$test_plan_file] = [
 			'stdout_file' => $stdout_file,
