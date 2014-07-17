@@ -3,6 +3,7 @@
 	"require": {
 		"symfony/console": "*"
 	},
+	"bin": ["ptest"],
 	"autoload": {
 		"psr-4": {
 			"PrestaShop\\Ptest\\": "src/"
