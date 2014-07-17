@@ -60,8 +60,8 @@ class Runner
 			require $bootstrap_file;
 		}
 
-		$call_before = ['beforeAll', 'setUpBeforeClass', 'setupBeforeClass'];
-		$call_after = ['afterAll', 'tearDownAfterClass', 'tardownAfterClass'];
+		$call_before = ['beforeAll', 'setUpBeforeClass'];
+		$call_after = ['afterAll', 'tearDownAfterClass'];
 
 		$this->classsetup_ok = $this->callMethods($call_before, true);
 		
@@ -112,6 +112,7 @@ class Runner
 
 						if ($m->isPublic() && $m->isStatic())
 						{
+							echo "Calling (static) $name\n";
 							$m->invoke(null);
 							continue;
 						}
@@ -121,6 +122,7 @@ class Runner
 				$callable = [$obj, $name];
 				if (is_callable($callable))
 				{
+					echo "Calling $name\n";
 					call_user_func($callable);
 				}
 			} catch (\Exception $e) {
@@ -150,8 +152,8 @@ class Runner
 			return;
 		}
 
-		$call_before = ['beforeEach', 'setUp', 'setup', 'before'.ucfirst($name)];
-		$call_after = ['afterEach', 'tearDown', 'teardown', 'after'.ucfirst($name)];
+		$call_before = ['beforeEach', 'setUp', 'before'.ucfirst($name)];
+		$call_after = ['afterEach', 'tearDown', 'after'.ucfirst($name)];
 
 		$setup_ok = $this->callMethods($call_before, false);
 		$execution_ok = false;

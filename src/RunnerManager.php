@@ -61,7 +61,10 @@ class RunnerManager
 		if (count($this->results) > 0)
 			$this->results = call_user_func_array('array_merge', $this->results);
 
-		echo "\n".trim(implode("\n", $this->stdout))."\n";
+		foreach ($this->stdout as $position => $output)
+		{
+			echo sprintf("Output of TestPlan #%d:\n%s\n\n", $position + 1, $output);
+		}
 
 		if (count($this->errors) > 0)
 		{
