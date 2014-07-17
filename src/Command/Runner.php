@@ -29,7 +29,7 @@ class Runner extends Command
     {
         $test_case = $input->getArgument('test_class_or_directory');
 
-        $discoverer = new \PrestaShop\Ptest\Discoverer($test_case);
+        $discoverer = new \PrestaShop\Ptest\Discoverer($test_case, $input->getOption('bootstrap'));
         $test_plans = $discoverer->getTestPlans();
 
         $runner = new \PrestaShop\Ptest\RunnerManager($test_plans, [

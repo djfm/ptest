@@ -7,8 +7,11 @@ class Discoverer
 	private $known_classes = [];
 	private $test_plans = [];
 
-	public function __construct($target)
+	public function __construct($target, $bootstrap = null)
 	{
+		if (is_string($bootstrap) && $bootstrap)
+			require $bootstrap;
+
 		$this->known_classes = get_declared_classes();
 		$this->discoverTestClassesOnFileSystem($target);
 	}
@@ -42,10 +45,13 @@ class Discoverer
 	public function discoverLoadedClasess()
 	{
 		$loaded_classes = array_diff(get_declared_classes(), $this->known_classes);
-		
+
 		foreach ($loaded_classes as $class)
 		{
 			$rc = new \ReflectionClass($class);
+
+			if (!preg_match('/Test$/', $class))
+				continue;
 
 			$loaders = [];
 
