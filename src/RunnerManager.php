@@ -56,8 +56,10 @@ class RunnerManager
 		ksort($this->errors);
 		ksort($this->results);
 
-		$this->errors = call_user_func_array('array_merge', array_values($this->errors));
-		$this->results = call_user_func_array('array_merge', $this->results);
+		if (count($this->errors) > 0)
+			$this->errors = call_user_func_array('array_merge', array_values($this->errors));
+		if (count($this->results) > 0)
+			$this->results = call_user_func_array('array_merge', $this->results);
 
 		echo "\n".trim(implode("\n", $this->stdout))."\n";
 

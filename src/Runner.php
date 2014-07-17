@@ -79,7 +79,11 @@ class Runner
 				$n = 0;
 				foreach ($data as $arguments)
 				{
-					if ($n % (int)$method['dataProviderBatchCount'] === (int)$method['dataProviderBatch'])
+					if (
+						!isset($method['dataProviderBatchCount']) ||
+						!isset($method['dataProviderBatch']) ||
+						$n % (int)$method['dataProviderBatchCount'] === (int)$method['dataProviderBatch']
+					)
 					{
 						$this->runTestMethod($method, $arguments);
 					}
@@ -108,7 +112,7 @@ class Runner
 
 						if ($m->isPublic() && $m->isStatic())
 						{
-							$m->invoke();
+							$m->invoke(null);
 							continue;
 						}
 					}
