@@ -10,6 +10,7 @@ class RunnerManager
 	private $running_processes = [];
 	private $stdout = [];
 	private $errors = [];
+	private $results = [];
 
 	public function __construct(array $test_plans, array $options = array())
 	{
@@ -52,8 +53,10 @@ class RunnerManager
 		
 		ksort($this->stdout);
 		ksort($this->errors);
+		ksort($this->results);
 
 		$this->errors = call_user_func_array('array_merge', array_values($this->errors));
+		$this->results = call_user_func_array('array_merge', $this->results);
 
 		echo "\n".trim(implode("\n", $this->stdout))."\n";
 
@@ -64,18 +67,41 @@ class RunnerManager
 
 		foreach ($this->errors as $n => $error)
 		{
-			echo sprintf("%d) %s\n", $n+1, $error['step']);
-			echo sprintf("\t%s\n", $error['message']);
+			echo sprintf("%d) %s\n\n", $n+1, $error['step']);
+			echo sprintf("\t%s\n\n", $error['message']);
 			if ($error['kind'] === 'exception')
 			{
-				echo sprintf("\tException `%s` (%s:%s): \n", $error['exception_class'], $error['file'], $error['line']);
+				echo sprintf("\tException '%s' (at `%s:%s`): \n", $error['exception_class'], $error['file'], $error['line']);
 				foreach ($error['trace'] as $t)
 				{
-					print_r($t);
+					if ($t['file'] && $t['line'])
+					{
+						$file = substr($t['file'], strlen(realpath(__DIR__.'/..')) + 1);
+
+						echo sprintf("\t\tat `%s:%s` in '%s%s%s'\n",
+							$file, $t['line'], $t['class'], $t['type'], $t['function']
+						);
+					}
+					else
+					{
+						echo sprintf("\t\tin '%s%s%s'\n",
+							$t['class'], $t['type'], $t['function']
+						);
+					}
 				}
 			}
 			echo "\n";
 		}
+
+		echo "Execution Summary:\n";
+		foreach ($this->results as $result)
+		{
+			echo $result['status'];
+		}
+		echo "\n";
+		echo sprintf("Tests: %d, Errors: %d\n", count($this->results), count($this->errors));
+
+		echo "\n";
 	}
 
 	public function startNewProcess()
@@ -137,6 +163,7 @@ class RunnerManager
 			if ($status['running'] === false)
 			{
 				$this->stdout[$data['test_plan']->getPosition()] = file_get_contents($data['stdout_file']);
+				$this->results[$data['test_plan']->getPosition()] = [];
 
 				foreach (explode("\n", file_get_contents($data['output_file'])) as $line)
 				{
@@ -144,6 +171,7 @@ class RunnerManager
 					if (isset($result['type']) && $result['type'] === 'result')
 					{
 						echo $result['status'];
+						$this->results[$data['test_plan']->getPosition()][] = $result;
 					}
 					elseif (isset($result['type']) && $result['type'] === 'error')
 					{
