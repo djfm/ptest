@@ -53,7 +53,7 @@ class RunnerManager
 
 	public function afterRun()
 	{
-		echo "\n";
+		echo "\n\n";
 		
 		ksort($this->stdout);
 		ksort($this->errors);
