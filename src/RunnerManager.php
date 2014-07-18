@@ -200,7 +200,7 @@ class RunnerManager
 					}
 					elseif (isset($result['type']) && $result['type'] === 'successful_exit')
 					{
-						$exited_successfully = false;
+						$exited_successfully = true;
 					}
 				}
 
