@@ -60,7 +60,7 @@ class Runner
 			require $bootstrap_file;
 		}
 
-		$call_before = ['beforeAll', 'setUpBeforeClass'];
+		$call_before = ['setUpBeforeClass', 'beforeAll'];
 		$call_after = ['afterAll', 'tearDownAfterClass'];
 
 		$this->classsetup_ok = $this->callMethods($call_before, true);
@@ -150,8 +150,8 @@ class Runner
 			return;
 		}
 
-		$call_before = ['beforeEach', 'setUp', 'before'.ucfirst($name)];
-		$call_after = ['afterEach', 'tearDown', 'after'.ucfirst($name)];
+		$call_before = ['setUp', 'beforeEach', 'before'.ucfirst($name)];
+		$call_after = ['after'.ucfirst($name), 'afterEach', 'tearDown'];
 
 		$setup_ok = $this->callMethods($call_before, false);
 		$execution_ok = false;

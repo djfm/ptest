@@ -160,6 +160,7 @@ class RunnerManager
 		}, $command_parts));
 
 		$res = proc_open($command, $io, $pipes, null, ['TEST_TOKEN' => $this->test_token]);
+		echo "started process for $test_plan_file\n";
 
 		$this->test_token++;
 
@@ -179,6 +180,7 @@ class RunnerManager
 			$status = proc_get_status($data['proc']);
 			if ($status['running'] === false)
 			{
+				echo "process for $test_plan_file no longer running\n";
 				$this->stdout[$data['test_plan']->getPosition()] = file_get_contents($data['stdout_file']);
 				$this->results[$data['test_plan']->getPosition()] = [];
 
