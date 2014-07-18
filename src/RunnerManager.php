@@ -89,7 +89,7 @@ class RunnerManager
 				echo sprintf("\tException '%s' (at `%s:%s`): \n", $error['exception_class'], $error['file'], $error['line']);
 				foreach ($error['trace'] as $t)
 				{
-					if ($t['file'] && $t['line'])
+					if (!empty($t['file']) && !empty($t['line']))
 					{
 						echo sprintf("\t\tat `%s:%s` in '%s%s%s'\n",
 							$t['file'], $t['line'], $t['class'], $t['type'], $t['function']
@@ -160,7 +160,6 @@ class RunnerManager
 		}, $command_parts));
 
 		$res = proc_open($command, $io, $pipes, null, ['TEST_TOKEN' => $this->test_token]);
-		echo "started process for $test_plan_file\n";
 
 		$this->test_token++;
 
@@ -180,7 +179,8 @@ class RunnerManager
 			$status = proc_get_status($data['proc']);
 			if ($status['running'] === false)
 			{
-				echo "process for $test_plan_file no longer running\n";
+				$exited_successfully = false;
+
 				$this->stdout[$data['test_plan']->getPosition()] = file_get_contents($data['stdout_file']);
 				$this->results[$data['test_plan']->getPosition()] = [];
 
@@ -198,6 +198,20 @@ class RunnerManager
 							$this->errors[$data['test_plan']->getPosition()] = [];
 						$this->errors[$data['test_plan']->getPosition()][] = $result;
 					}
+					elseif (isset($result['type']) && $result['type'] === 'successful_exit')
+					{
+						$exited_successfully = false;
+					}
+				}
+
+				if (!$exited_successfully)
+				{
+					if (!isset($this->errors[$data['test_plan']->getPosition()]))
+							$this->errors[$data['test_plan']->getPosition()] = [];
+					$this->errors[$data['test_plan']->getPosition()][] = [
+						'step' => 'He\'s dead, Jim!',
+						'message' => 'Test process died, we can\' really know why, as it did not produce an exception.'
+					];
 				}
 
 				unset($this->running_processes[$test_plan_file]);

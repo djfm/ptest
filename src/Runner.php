@@ -94,6 +94,8 @@ class Runner
 		}
 
 		$this->classteardown_ok = $this->callMethods($call_after, true);
+
+		$this->log(['type' => 'successful_exit']);
 	}
 
 	public function callMethods(array $names, $tryStaticFirst = false)
