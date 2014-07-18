@@ -84,7 +84,7 @@ class RunnerManager
 		{
 			echo sprintf("%d) %s\n\n", $n+1, $error['step']);
 			echo sprintf("\t%s\n\n", $error['message']);
-			if ($error['kind'] === 'exception')
+			if (isset($error['kind']) && $error['kind'] === 'exception')
 			{
 				echo sprintf("\tException '%s' (at `%s:%s`): \n", $error['exception_class'], $error['file'], $error['line']);
 				foreach ($error['trace'] as $t)
