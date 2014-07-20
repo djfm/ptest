@@ -99,7 +99,7 @@ class RunnerManager
 				echo sprintf("\tException '%s' (at `%s:%s`): \n", $error['exception_class'], $error['file'], $error['line']);
 				foreach ($error['trace'] as $t)
 				{
-					if (!empty($t['file']) && !empty($t['line']))
+					if (!empty($t['file']) && !empty($t['line']) && !empty($t['class']) && !empty($t['type']))
 					{
 						echo sprintf("\t\tat `%s:%s` in '%s%s%s'\n",
 							$t['file'], $t['line'], $t['class'], $t['type'], $t['function']
