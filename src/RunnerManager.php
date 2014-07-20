@@ -5,10 +5,12 @@ namespace PrestaShop\Ptest;
 class RunnerManager
 {
 	private $test_plans = [];
+	private $plans_count;
 	private $bootstrap_file = null;
 	private $max_processes = 5;
 	private $running_processes = [];
 	private $stdout = [];
+	private $stderr = [];
 	private $errors = [];
 	private $results = [];
 	private $test_token = 1;
@@ -18,10 +20,13 @@ class RunnerManager
 	{
 		$this->test_plans = $test_plans;
 		
-		foreach ($test_plans as $n => $test_plan)
+		$n = 0;
+		foreach ($test_plans as $k => $test_plan)
 		{
-			$test_plans[$n]->setPosition($n);
+			$test_plans[$k]->setPosition($n);
+			$n++;
 		}
+		$this->plans_count = $n;
 
 		foreach (['bootstrap_file', 'max_processes'] as $option)
 		{
@@ -56,6 +61,7 @@ class RunnerManager
 		echo "\n\n";
 		
 		ksort($this->stdout);
+		ksort($this->stderr);
 		ksort($this->errors);
 		ksort($this->results);
 
@@ -64,15 +70,19 @@ class RunnerManager
 		if (count($this->results) > 0)
 			$this->results = call_user_func_array('array_merge', $this->results);
 
-		$position = 1;
-		foreach ($this->stdout as $output)
+		
+		for ($position = 0; $position < $this->plans_count; $position++)
 		{
-			$output = trim($output);
+			$output = trim($this->stdout[$position]);
 			if ($output !== '')
 			{
-				echo sprintf("Output of TestPlan #%d:\n%s\n\n", $position, $output);
+				echo sprintf("Output of TestPlan #%d:\n\n%s\n\n\n", $position, $output);
 			}
-			$position++;
+			$error = trim($this->stderr[$position]);
+			if ($error !== '')
+			{
+				echo sprintf("Stderr of TestPlan #%d:\n\n%s\n\n\n", $position, $error);
+			}
 		}
 
 		if (count($this->errors) > 0)
@@ -176,13 +186,17 @@ class RunnerManager
 	{
 		foreach ($this->running_processes as $test_plan_file => $data)
 		{
+			// used to display stuff in a consistent order
+			$pos = $data['test_plan']->getPosition();
+
 			$status = proc_get_status($data['proc']);
 			if ($status['running'] === false)
 			{
 				$exited_successfully = false;
 
-				$this->stdout[$data['test_plan']->getPosition()] = file_get_contents($data['stdout_file']);
-				$this->results[$data['test_plan']->getPosition()] = [];
+				$this->stdout[$pos] = file_get_contents($data['stdout_file']);
+				$this->stderr[$pos] = file_get_contents($data['stderr_file']);
+				$this->results[$pos] = [];
 
 				foreach (explode("\n", file_get_contents($data['output_file'])) as $line)
 				{
@@ -190,13 +204,13 @@ class RunnerManager
 					if (isset($result['type']) && $result['type'] === 'result')
 					{
 						echo $result['status'];
-						$this->results[$data['test_plan']->getPosition()][] = $result;
+						$this->results[$pos][] = $result;
 					}
 					elseif (isset($result['type']) && $result['type'] === 'error')
 					{
-						if (!isset($this->errors[$data['test_plan']->getPosition()]))
-							$this->errors[$data['test_plan']->getPosition()] = [];
-						$this->errors[$data['test_plan']->getPosition()][] = $result;
+						if (!isset($this->errors[$pos]))
+							$this->errors[$pos] = [];
+						$this->errors[$pos][] = $result;
 					}
 					elseif (isset($result['type']) && $result['type'] === 'successful_exit')
 					{
@@ -206,11 +220,12 @@ class RunnerManager
 
 				if (!$exited_successfully)
 				{
-					if (!isset($this->errors[$data['test_plan']->getPosition()]))
-							$this->errors[$data['test_plan']->getPosition()] = [];
-					$this->errors[$data['test_plan']->getPosition()][] = [
+					if (!isset($this->errors[$pos]))
+							$this->errors[$pos] = [];
+
+					$this->errors[$pos][] = [
 						'step' => 'He\'s dead, Jim!',
-						'message' => 'Test process died, we can\' really know why, as it did not produce an exception.'
+						'message' => 'Test process died, and we can\'t easily know why.'
 					];
 				}
 
