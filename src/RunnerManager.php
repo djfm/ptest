@@ -105,10 +105,16 @@ class RunnerManager
 							$t['file'], $t['line'], $t['class'], $t['type'], $t['function']
 						);
 					}
-					else
+					elseif (!empty($t['class']) && !empty($t['type']))
 					{
 						echo sprintf("\t\tin '%s%s%s'\n",
 							$t['class'], $t['type'], $t['function']
+						);
+					}
+					elseif (!empty($t['function']))
+					{
+						echo sprintf("\t\tin '%s'\n",
+							$t['function']
 						);
 					}
 				}
