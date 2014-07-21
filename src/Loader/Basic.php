@@ -29,20 +29,35 @@ class Basic implements LoaderInterface
 				)
 				{
 					$group = $dcp->getOption('parallel', 'default');
+					$dataProvider = $dcp->getOption('dataProvider', null);
 
-					if ($dcp->getOption('dataProvider') && $dcp->getOption('parallelize', 1) > 1)
+					if ($dataProvider && $dcp->getOption('parallelize', 1) > 1)
 					{
 						$n = $dcp->getOption('parallelize', 1);
-						for ($i = 0; $i < $n; $i++)
+
+						$obj = $rc->newInstance();
+						$data = $obj->$dataProvider();
+						$keys = [];
+
+						$i = 0;
+						foreach ($data as $key => $value)
 						{
-							$pgroup = "$group (parallel batch $i)";
-							if (!isset($this->test_plans[$pgroup]))
-							{
-								$this->test_plans[$pgroup] = new TestPlan($rc, $pgroup);
-							}
+							$b = $i % $n;
+							$pgroup = "$group (parallel batch $b)";
+							
+							if (!isset($keys[$pgroup]))
+								$keys[$pgroup] = [];
+
+							$keys[$pgroup][$key] = $b;
+
+							$i++;
+						}
+
+						foreach ($keys as $pgroup => $pkeys)
+						{
+							$this->test_plans[$pgroup] = new TestPlan($rc, $pgroup);
 							$this->test_plans[$pgroup]->addMethod($method, [
-								'dataProviderBatch' => $i,
-								'dataProviderBatchCount' => $n
+								'dataProviderKeys' => $pkeys,
 							]);
 						}
 					}

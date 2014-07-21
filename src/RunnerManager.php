@@ -5,6 +5,8 @@ namespace PrestaShop\Ptest;
 class RunnerManager
 {
 	private $test_plans = [];
+	private $cases = [];
+	private $tests_count = 0;
 	private $plans_count;
 	private $bootstrap_file = null;
 	private $max_processes = 5;
@@ -22,6 +24,13 @@ class RunnerManager
 		$n = 0;
 		foreach ($test_plans as $k => $test_plan)
 		{
+			$cases = $test_plan->listCases();
+			foreach ($cases as $name => $count)
+			{
+				$this->cases[$name] = (isset($this->cases[$name]) ? $this->cases[$name] : 0) + $count;
+				$this->tests_count += $count;
+			}
+
 			$test_plans[$k]->setPosition($n);
 			$n++;
 		}
@@ -36,6 +45,13 @@ class RunnerManager
 
 	public function run()
 	{
+		$msg = sprintf(
+			"Found %1\$d test cases to run, totalling %2\$d tests, split across %3\$d execution plans (gonna run them %4\$d by %4\$d).\n",
+			count($this->cases),
+			$this->tests_count,
+			$this->plans_count,
+			$this->max_processes
+		);
 		$this->started_at = time();
 
 		while (count($this->test_plans) > 0 || count($this->running_processes) > 0)

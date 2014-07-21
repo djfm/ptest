@@ -26,6 +26,7 @@ class TestPlan
 	public function addMethod(\ReflectionMethod $m, array $options = array())
 	{
 		$dcp = new DocCommentParser($m->getDocComment());
+		
 		$settings = [
 			'method' => $m->getName()
 		];
@@ -33,10 +34,8 @@ class TestPlan
 		if ($data_provider_name = $dcp->getOption('dataProvider'))
 		{
 			$settings['dataProvider'] = $data_provider_name;
-			if (isset($options['dataProviderBatch']))
+			if (isset($options['dataProviderKeys']))
 			{
-				$settings['dataProviderBatch'] = $options['dataProviderBatch'];
-				$settings['dataProviderBatchCount'] = $options['dataProviderBatchCount'];
 				$this->must_have_just_one_method = true;
 			}
 		}
@@ -47,7 +46,47 @@ class TestPlan
 			$settings['expectedException'] = $expected_exception;
 		}
 
+		$settings = array_merge($settings, $options);
+
 		$this->methods[$m->getName()] = $settings;
+	}
+
+	/**
+	* Returns the number of individual tests,
+	* i.e. the number of dots you expect to see if everything is successful.
+	*/
+	public function countTests()
+	{
+		$n = 0;
+		foreach ($this->methods as $method)
+		{
+			if (isset($method['dataProviderKeys']))
+				$n += count($method['dataProviderKeys']);
+			else
+				$n += 1;
+		}
+		return $n;
+	}
+
+	/**
+	* Returns an array of strings like ["class::method" => integer_count].
+	* This is useful to count the tests for reporting, as it
+	* allows counting things more uniquely
+	*/
+	public function listCases()
+	{
+		$cases = [];
+		foreach ($this->methods as $method)
+		{
+			$name = $method['class'].'::'.$method['method'];
+			$n = 1;
+			if (isset($method['dataProviderKeys']))
+				$n = count($method['dataProviderKeys']);
+			if (!isset($cases[$name]))
+				$cases[$name] = 0;
+			$cases[$name] += $n;
+		}
+		return $cases;
 	}
 
 	public function asJSON()

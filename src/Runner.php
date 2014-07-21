@@ -9,6 +9,7 @@ class Runner
 	protected $instance;
 	protected $classsetup_ok = false;
 	protected $classteardown_ok = false;
+	protected $cancel_next_tests = false;
 
 	public function __construct($job_description_file, $output_file, $bootstrap_file)
 	{
@@ -75,20 +76,13 @@ class Runner
 			{
 				$obj = $this->getInstance();
 				$data = $obj->{$method['dataProvider']}();
-				
-				$n = 0;
-				foreach ($data as $arguments)
-				{
-					if (
-						!isset($method['dataProviderBatchCount']) ||
-						!isset($method['dataProviderBatch']) ||
-						$n % (int)$method['dataProviderBatchCount'] === (int)$method['dataProviderBatch']
-					)
-					{
-						$this->runTestMethod($method, $arguments);
-					}
 
-					$n++;
+				$keys = isset($method['dataProviderKeys']) ? $method['dataProviderKeys'] : null;
+				
+				foreach ($data as $key => $arguments)
+				{
+					if ($keys === null || isset($keys[$key]))
+						$this->runTestMethod($method, $arguments);
 				}
 			}
 		}
@@ -151,6 +145,16 @@ class Runner
 			return;
 		}
 
+		if ($this->cancel_next_tests)
+		{
+			$this->log([
+				'test_name' => $test_name,
+				'type' => 'result',
+				'status' => 'C'
+			]);
+			return;
+		}
+
 		$call_before = ['setUp', 'beforeEach', 'before'.ucfirst($name)];
 		$call_after = ['after'.ucfirst($name), 'afterEach', 'tearDown'];
 
@@ -198,6 +202,9 @@ class Runner
 			elseif (!$teardown_ok)
 				$status = 'd';
 		}
+
+		if ($status !== '.')
+			$this->cancel_next_tests = true;
 
 		$this->log([
 			'test_name' => $test_name,
