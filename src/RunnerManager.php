@@ -19,7 +19,6 @@ class RunnerManager
 	public function __construct(array $test_plans, array $options = array())
 	{
 		$this->test_plans = $test_plans;
-		
 		$n = 0;
 		foreach ($test_plans as $k => $test_plan)
 		{

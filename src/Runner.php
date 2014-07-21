@@ -141,7 +141,6 @@ class Runner
 		if (count($arguments) > 0)
 			$test_name .= ' with data: '.json_encode($arguments);
 
-
 		if (!$this->classsetup_ok)
 		{
 			$this->log([

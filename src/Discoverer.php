@@ -77,7 +77,9 @@ class Discoverer
 
 	public function loadTestsFromClass(\ReflectionClass $rc, \PrestaShop\Ptest\Loader\LoaderInterface $loader)
 	{
-		$this->test_plans = array_merge($this->test_plans, $loader->loadTests($rc));
+		// Make sure we merge numerical arrays, else new test plans will overwrite previously
+		// discovered ones.
+		$this->test_plans = array_merge($this->test_plans, array_values($loader->loadTests($rc)));
 	}
 
 	public function getTestPlans()
