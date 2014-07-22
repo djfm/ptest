@@ -33,6 +33,8 @@ class Worker extends Command
 
     protected function execute(InputInterface $input, OutputInterface $output)
     {
+        ini_set('display_errors', 'stderr');
+
         $runner = new \PrestaShop\Ptest\Runner(
             $input->getArgument('test_plan'),
             $input->getArgument('output_file'),

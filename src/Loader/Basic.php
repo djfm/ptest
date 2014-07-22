@@ -31,34 +31,47 @@ class Basic implements LoaderInterface
 					$group = $dcp->getOption('parallel', 'default');
 					$dataProvider = $dcp->getOption('dataProvider', null);
 
-					if ($dataProvider && $dcp->getOption('parallelize', 1) > 1)
+					if ($dataProvider)
 					{
-						$n = $dcp->getOption('parallelize', 1);
-
 						$obj = $rc->newInstance();
 						$data = $obj->$dataProvider();
-						$keys = [];
-
-						$i = 0;
-						foreach ($data as $key => $value)
+						
+						if ($dcp->getOption('parallelize', 1) > 1)
 						{
-							$b = $i % $n;
-							$pgroup = "$group (parallel batch $b)";
-							
-							if (!isset($keys[$pgroup]))
-								$keys[$pgroup] = [];
+							$n = $dcp->getOption('parallelize', 1);
 
-							$keys[$pgroup][$key] = $b;
+							$keys = [];
 
-							$i++;
+							$i = 0;
+							foreach ($data as $key => $value)
+							{
+								$b = $i % $n;
+								$pgroup = "$group (parallel batch $b)";
+								
+								if (!isset($keys[$pgroup]))
+									$keys[$pgroup] = [];
+
+								$keys[$pgroup][$key] = $b;
+
+								$i++;
+							}
+
+							foreach ($keys as $pgroup => $pkeys)
+							{
+								$this->test_plans[$pgroup] = new TestPlan($rc, $pgroup);
+								$this->test_plans[$pgroup]->addMethod($method, [
+									'dataProviderKeys' => $pkeys,
+									'testsCount' => count($pkeys)
+								]);
+							}
 						}
-
-						foreach ($keys as $pgroup => $pkeys)
+						else
 						{
-							$this->test_plans[$pgroup] = new TestPlan($rc, $pgroup);
-							$this->test_plans[$pgroup]->addMethod($method, [
-								'dataProviderKeys' => $pkeys,
-							]);
+							if (!isset($this->test_plans[$group]))
+							{
+								$this->test_plans[$group] = new TestPlan($rc, $group);
+							}
+							$this->test_plans[$group]->addMethod($method, ['testsCount' => count($data)]);
 						}
 					}
 					else

@@ -28,7 +28,8 @@ class TestPlan
 		$dcp = new DocCommentParser($m->getDocComment());
 		
 		$settings = [
-			'method' => $m->getName()
+			'method' => $m->getName(),
+			'testsCount' => 1
 		];
 
 		if ($data_provider_name = $dcp->getOption('dataProvider'))
@@ -60,10 +61,7 @@ class TestPlan
 		$n = 0;
 		foreach ($this->methods as $method)
 		{
-			if (isset($method['dataProviderKeys']))
-				$n += count($method['dataProviderKeys']);
-			else
-				$n += 1;
+			$n += (int)$method['testsCount'];
 		}
 		return $n;
 	}
@@ -79,12 +77,7 @@ class TestPlan
 		foreach ($this->methods as $method)
 		{
 			$name = $method['class'].'::'.$method['method'];
-			$n = 1;
-			if (isset($method['dataProviderKeys']))
-				$n = count($method['dataProviderKeys']);
-			if (!isset($cases[$name]))
-				$cases[$name] = 0;
-			$cases[$name] += $n;
+			$cases[$name] += (int)$method['testsCount'];
 		}
 		return $cases;
 	}
