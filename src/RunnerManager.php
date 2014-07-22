@@ -17,6 +17,7 @@ class RunnerManager
 	private $results = [];
 	private $test_token = 1;
 	private $started_at;
+	private $only_display_info = false;
 
 	public function __construct(array $test_plans, array $options = array())
 	{
@@ -36,7 +37,7 @@ class RunnerManager
 		}
 		$this->plans_count = $n;
 
-		foreach (['bootstrap_file', 'max_processes'] as $option)
+		foreach (['bootstrap_file', 'max_processes', 'only_display_info'] as $option)
 		{
 			if (isset($options[$option]) && $options[$option])
 				$this->$option = $options[$option];
@@ -52,6 +53,15 @@ class RunnerManager
 			$this->plans_count,
 			$this->max_processes
 		);
+
+		echo $msg;
+
+		if ($this->only_display_info)
+		{
+			echo "\n[Returning without running tests, as the --info/-i flag was provided]\n";
+			return;
+		}
+
 		$this->started_at = time();
 
 		while (count($this->test_plans) > 0 || count($this->running_processes) > 0)

@@ -21,7 +21,8 @@ class Runner extends Command
                 'Which test do you want to run?'
             )
             ->addOption('bootstrap', 'b', InputOption::VALUE_REQUIRED, 'Bootstrap file')
-            ->addOption('processes', 'p', InputOption::VALUE_REQUIRED, 'Maximum number of parallel processes');
+            ->addOption('processes', 'p', InputOption::VALUE_REQUIRED, 'Maximum number of parallel processes')
+            ->addOption('info', 'i', InputOption::VALUE_NONE, 'Only display information, do not run any test')
         ;
     }
 
@@ -34,7 +35,8 @@ class Runner extends Command
 
         $runner = new \PrestaShop\Ptest\RunnerManager($test_plans, [
             'bootstrap_file' => $input->getOption('bootstrap'),
-            'max_processes' => $input->getOption('processes')
+            'max_processes' => $input->getOption('processes'),
+            'only_display_info' => $input->getOption('info')
         ]);
 
         $runner->run();
