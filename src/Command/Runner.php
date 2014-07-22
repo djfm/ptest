@@ -23,6 +23,7 @@ class Runner extends Command
             ->addOption('bootstrap', 'b', InputOption::VALUE_REQUIRED, 'Bootstrap file')
             ->addOption('processes', 'p', InputOption::VALUE_REQUIRED, 'Maximum number of parallel processes')
             ->addOption('info', 'i', InputOption::VALUE_NONE, 'Only display information, do not run any test')
+            ->addOption('filter', 'f', InputOption::VALUE_REQUIRED, 'Filter tests by regular expression')
         ;
     }
 
@@ -30,7 +31,12 @@ class Runner extends Command
     {
         $test_case = $input->getArgument('test_class_or_directory');
 
-        $discoverer = new \PrestaShop\Ptest\Discoverer($test_case, $input->getOption('bootstrap'));
+        $discoverer = new \PrestaShop\Ptest\Discoverer(
+            $test_case,
+            $input->getOption('bootstrap'),
+            $input->getOption('filter')
+        );
+
         $test_plans = $discoverer->getTestPlans();
 
         $runner = new \PrestaShop\Ptest\RunnerManager($test_plans, [

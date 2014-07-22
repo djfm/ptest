@@ -8,6 +8,7 @@ use \PrestaShop\Ptest\TestPlan;
 class Basic implements LoaderInterface
 {
 	protected $test_plans = [];
+	protected $filter = null;
 
 	public function loadTests(\ReflectionClass $rc)
 	{
@@ -28,6 +29,12 @@ class Basic implements LoaderInterface
 					$dcp->hasOption('test')
 				)
 				{
+					if ($this->filter)
+					{
+						if (!preg_match('#'.$this->filter.'#', $method->getName()))
+							continue;
+					}
+
 					$group = $dcp->getOption('parallel', 'default');
 					$dataProvider = $dcp->getOption('dataProvider', null);
 
@@ -87,5 +94,11 @@ class Basic implements LoaderInterface
 		}
 
 		return $this->test_plans;
+	}
+
+	public function setFilter($string)
+	{
+		$this->filter = $string;
+		return $this;
 	}
 }

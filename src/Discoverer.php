@@ -6,11 +6,31 @@ class Discoverer
 {
 	private $known_classes = [];
 	private $test_plans = [];
+	private $class_filter = null;
+	private $method_filter = null;
 
-	public function __construct($target, $bootstrap = null)
+	public function __construct($target, $bootstrap = null, $filter = null)
 	{
 		if (is_string($bootstrap) && $bootstrap)
 			require $bootstrap;
+
+		if ($filter)
+		{
+			$tmp = explode('::', $filter);
+			if (count($tmp) === 2)
+			{
+				$this->class_filter = $tmp[0];
+				$this->method_filter = $tmp[1];
+			}
+			elseif (count($tmp) === 1)
+			{
+				$this->class_filter = $tmp[0];
+			}
+			else
+			{
+				throw new \Exeption(sprintf('Invalid filter `%s`', $filter));
+			}
+		}
 
 		$this->known_classes = get_declared_classes();
 		$this->discoverTestClassesOnFileSystem($target);
@@ -43,7 +63,7 @@ class Discoverer
 	}
 
 	public function discoverLoadedClasess()
-	{
+	{		
 		$loaded_classes = array_diff(get_declared_classes(), $this->known_classes);
 
 		foreach ($loaded_classes as $class)
@@ -52,6 +72,12 @@ class Discoverer
 
 			if (!preg_match('/Test$/', $class))
 				continue;
+
+			if ($this->class_filter)
+			{
+				if (!preg_match('#'.$this->class_filter.'#', $class))
+					continue;
+			}
 
 			$loaders = [];
 
@@ -69,6 +95,9 @@ class Discoverer
 				throw new \Exception(sprintf('Ambiguous loader for class %s. TestClasses must implement exactly one interface from PrestaShop\\Ptest\\TestClass.', $class));
 		
 			$loader = new $loaders[0];
+
+			$loader->setFilter($this->method_filter);
+			
 			$this->loadTestsFromClass($rc, $loader);
 		}
 
