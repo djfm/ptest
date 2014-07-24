@@ -167,7 +167,7 @@ class RunnerManager
 		$stderr_file = tempnam(null, 'ptest_stderr');
 
 		$io = [
-			0 => ['file', '/dev/null', 'r'],
+			0 => STDIN,
 			1 => ['file', $stdout_file, 'w'],
 			2 => ['file', $stderr_file, 'w']
 		];

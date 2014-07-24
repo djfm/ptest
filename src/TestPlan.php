@@ -76,8 +76,8 @@ class TestPlan
 		$cases = [];
 		foreach ($this->methods as $method)
 		{
-			$name = $method['class'].'::'.$method['method'];
-			$cases[$name] += (int)$method['testsCount'];
+			$name = $this->rc->getName().'::'.$method['method'];
+			$cases[$name] = (isset($cases[$name]) ? $cases[$name] : 0) + (int)$method['testsCount'];
 		}
 		return $cases;
 	}
