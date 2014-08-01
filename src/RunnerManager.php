@@ -55,6 +55,7 @@ class RunnerManager
 		);
 
 		echo $msg;
+		echo "Results will be displayed as they come in, then summarized when every process has endend.\n\n";
 
 		if ($this->only_display_info)
 		{
@@ -78,7 +79,7 @@ class RunnerManager
 				sleep(1);
 		}
 
-		$this->afterRun();
+		return $this->afterRun();
 	}
 
 	public function afterRun()
@@ -159,6 +160,11 @@ class RunnerManager
 		echo sprintf("Tests: %d, Errors: %d, Time: %dm:%ds\n", count($this->results), count($this->errors), $minutes, $seconds);
 
 		echo "\n";
+
+		if (count($this->errors) === 0)
+			return 0;
+		else
+			return 1;
 	}
 
 	public function startNewProcess()
@@ -234,7 +240,7 @@ class RunnerManager
 					$result = json_decode($line, true);
 					if (isset($result['type']) && $result['type'] === 'result')
 					{
-						echo $result['status'];
+						echo sprintf("%s: %s\n", $result['test_name'], $result['status']);
 						$this->results[$pos][] = $result;
 					}
 					elseif (isset($result['type']) && $result['type'] === 'error')

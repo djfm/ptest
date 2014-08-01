@@ -45,6 +45,6 @@ class Runner extends Command
             'only_display_info' => $input->getOption('info')
         ]);
 
-        $runner->run();
+        exit($runner->run());
     }
 }
