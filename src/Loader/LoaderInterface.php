@@ -11,4 +11,5 @@ interface LoaderInterface
 	public function loadTests(\ReflectionClass $rc);
 
 	public function setFilter($string);
+	public function setDataProviderFilter(array $array);
 }

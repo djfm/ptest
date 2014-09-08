@@ -8,11 +8,14 @@ class Discoverer
 	private $test_plans = [];
 	private $class_filter = null;
 	private $method_filter = null;
+	private $data_provider_filter = null;
 
-	public function __construct($target, $bootstrap = null, $filter = null)
+	public function __construct($target, $bootstrap = null, $filter = null, $dataProviderFilter = null)
 	{
 		if (is_string($bootstrap) && $bootstrap)
 			require $bootstrap;
+
+		$this->data_provider_filter = $dataProviderFilter;
 
 		if ($filter)
 		{
@@ -97,6 +100,7 @@ class Discoverer
 			$loader = new $loaders[0];
 
 			$loader->setFilter($this->method_filter);
+			$loader->setDataProviderFilter($this->data_provider_filter);
 			
 			$this->loadTestsFromClass($rc, $loader);
 		}

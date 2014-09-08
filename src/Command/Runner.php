@@ -24,6 +24,8 @@ class Runner extends Command
             ->addOption('processes', 'p', InputOption::VALUE_REQUIRED, 'Maximum number of parallel processes')
             ->addOption('info', 'i', InputOption::VALUE_NONE, 'Only display information, do not run any test')
             ->addOption('filter', 'f', InputOption::VALUE_REQUIRED, 'Filter tests by regular expression')
+            ->addOption('data-provider-filter', 'z', InputOption::VALUE_REQUIRED | InputOption::VALUE_IS_ARRAY, 'Filter datasets returned by the dataProviders')
+
         ;
     }
 
@@ -34,7 +36,8 @@ class Runner extends Command
         $discoverer = new \PrestaShop\Ptest\Discoverer(
             $test_case,
             $input->getOption('bootstrap'),
-            $input->getOption('filter')
+            $input->getOption('filter'),
+            $input->getOption('data-provider-filter')
         );
 
         $test_plans = $discoverer->getTestPlans();

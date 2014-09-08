@@ -9,6 +9,7 @@ class Basic implements LoaderInterface
 {
 	protected $test_plans = [];
 	protected $filter = null;
+	protected $dp_filters = [];
 
 	public function loadTests(\ReflectionClass $rc)
 	{
@@ -43,42 +44,53 @@ class Basic implements LoaderInterface
 						$obj = $rc->newInstance();
 						$data = $obj->$dataProvider();
 						
-						if ($dcp->getOption('parallelize', 1) > 1)
+						$n = $dcp->getOption('parallelize', 1);
+
+						$keys = [];
+
+						$i = 0;
+						foreach ($data as $key => $value)
 						{
-							$n = $dcp->getOption('parallelize', 1);
-
-							$keys = [];
-
-							$i = 0;
-							foreach ($data as $key => $value)
+							if (isset($this->dp_filters[$method->getName()]))
 							{
-								$b = $i % $n;
-								$pgroup = "$group (parallel batch $b)";
-								
-								if (!isset($keys[$pgroup]))
-									$keys[$pgroup] = [];
+								$accept = false;
 
-								$keys[$pgroup][$key] = $b;
+								foreach ($this->dp_filters[$method->getName()] as $filters)
+								{
+									foreach ($filters as $p => $regexp)
+									{
+										if (isset($value[$p]) && 
+											(is_string($value[$p]) || is_numeric($value[$p])) &&
+											preg_match("/$regexp/", $value[$p])
+										)
+										{
+											$accept = true;
+										}
+									}
+								}
 
-								$i++;
+								if (!$accept)
+									continue;
 							}
 
-							foreach ($keys as $pgroup => $pkeys)
-							{
-								$this->test_plans[$pgroup] = new TestPlan($rc, $pgroup);
-								$this->test_plans[$pgroup]->addMethod($method, [
-									'dataProviderKeys' => $pkeys,
-									'testsCount' => count($pkeys)
-								]);
-							}
+							$b = $i % $n;
+							$pgroup = "$group (parallel batch " . ($b + 1) . " of max $n)";
+							
+							if (!isset($keys[$pgroup]))
+								$keys[$pgroup] = [];
+
+							$keys[$pgroup][$key] = $b;
+
+							$i++;
 						}
-						else
+
+						foreach ($keys as $pgroup => $pkeys)
 						{
-							if (!isset($this->test_plans[$group]))
-							{
-								$this->test_plans[$group] = new TestPlan($rc, $group);
-							}
-							$this->test_plans[$group]->addMethod($method, ['testsCount' => count($data)]);
+							$this->test_plans[$pgroup] = new TestPlan($rc, $pgroup);
+							$this->test_plans[$pgroup]->addMethod($method, [
+								'dataProviderKeys' => $pkeys,
+								'testsCount' => count($pkeys)
+							]);
 						}
 					}
 					else
@@ -100,5 +112,18 @@ class Basic implements LoaderInterface
 	{
 		$this->filter = $string;
 		return $this;
+	}
+
+	public function setDataProviderFilter(array $arr)
+	{
+		foreach ($arr as $a)
+		{
+			list($method, $filters) = explode(':', $a);
+
+			if (!isset($this->dp_filters[$method]))
+				$this->dp_filters[$method] = [];
+
+			$this->dp_filters[$method][] = explode(',', $filters);
+		}
 	}
 }
