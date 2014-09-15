@@ -175,6 +175,12 @@ class Runner
 				}
 				else
 				{
+					$on_exception = array($obj, 'onException');
+					if (is_callable($on_exception))
+					{
+						$files_prefix = md5($test_name).'_'.time();
+						call_user_func($on_exception, $e, $files_prefix);
+					}
 					$this->logException($e, $test_name);
 				}
 			}
