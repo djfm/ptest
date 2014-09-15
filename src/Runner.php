@@ -203,7 +203,7 @@ class Runner
 				$status = 'd';
 		}
 
-		if ($status !== '.')
+		if ($status !== '.' && !isset($method['dataProvider']))
 			$this->cancel_next_tests = true;
 
 		$this->log([
