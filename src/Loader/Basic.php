@@ -99,7 +99,19 @@ class Basic implements LoaderInterface
 						{
 							$this->test_plans[$group] = new TestPlan($rc, $group);
 						}
-						$this->test_plans[$group]->addMethod($method);
+
+						$tests_count = 1;
+
+						if ($dataProvider)
+						{
+							$obj = $rc->newInstance();
+							$data = $obj->$dataProvider();
+							$tests_count = count($data);
+						}
+
+						$this->test_plans[$group]->addMethod($method, [
+							'testsCount' => $tests_count
+						]);
 					}
 				}
 			}

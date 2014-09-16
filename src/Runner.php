@@ -198,6 +198,7 @@ class Runner
 							'type' => 'error',
 							'message' => 'Test failed, making another attempt ('.($attempt + 1).').'
 						]);
+						sleep(30);
 					}
 					$attempt++;
 				}
