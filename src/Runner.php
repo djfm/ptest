@@ -165,23 +165,41 @@ class Runner
 
 		if ($setup_ok)
 		{
-			try {
-				$res = call_user_func_array([$obj, $name], $arguments);
-				$execution_ok = true;
-			} catch (\Exception $e) {
-				if (isset($method['expectedException']) && ($e instanceof $method['expectedException']))
-				{
+
+			$max_attempts = $method['maxattempts'];
+			$attempt = 1;
+
+			while ($attempt <= $max_attempts)
+			{
+				try {
+					$res = call_user_func_array([$obj, $name], $arguments);
 					$execution_ok = true;
-				}
-				else
-				{
-					$on_exception = array($obj, 'onException');
-					if (is_callable($on_exception))
+					break;
+				} catch (\Exception $e) {
+					if (isset($method['expectedException']) && ($e instanceof $method['expectedException']))
 					{
-						$files_prefix = md5($test_name).'_'.time();
-						call_user_func($on_exception, $e, $files_prefix);
+						$execution_ok = true;
+						break;
 					}
-					$this->logException($e, $test_name);
+					else if ($attempt === $max_attempts)
+					{
+						$on_exception = array($obj, 'onException');
+						if (is_callable($on_exception))
+						{
+							$files_prefix = md5($test_name).'_'.time();
+							call_user_func($on_exception, $e, $files_prefix);
+						}
+						$this->logException($e, $test_name);
+					}
+					else
+					{
+						$this->log([
+							'test_name' => $test_name,
+							'type' => 'error',
+							'message' => 'Test failed, making another attempt ('.($attempt + 1).').'
+						]);
+					}
+					$attempt++;
 				}
 			}
 		}

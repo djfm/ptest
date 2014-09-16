@@ -29,7 +29,8 @@ class TestPlan
 		
 		$settings = [
 			'method' => $m->getName(),
-			'testsCount' => 1
+			'testsCount' => 1,
+			'maxattempts' => $dcp->getOption('maxattempts', 2)
 		];
 
 		if ($data_provider_name = $dcp->getOption('dataProvider'))

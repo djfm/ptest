@@ -39,7 +39,7 @@ class Basic implements LoaderInterface
 					$group = $dcp->getOption('parallel', 'default');
 					$dataProvider = $dcp->getOption('dataProvider', null);
 
-					if ($dataProvider)
+					if ($dataProvider && $dcp->hasOption('parallelize'))
 					{
 						$obj = $rc->newInstance();
 						$data = $obj->$dataProvider();
