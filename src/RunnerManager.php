@@ -206,7 +206,13 @@ class RunnerManager
 			return escapeshellcmd($arg);
 		}, $command_parts));
 
-		$res = proc_open($command, $io, $pipes, null, ['TEST_TOKEN' => $this->test_token]);
+		$env = array_merge($_SERVER, $_ENV, ['TEST_TOKEN' => $this->test_token]);
+		foreach ($env as $k => $v)
+			if (!is_scalar($v))
+				unset($env[$k]);
+
+
+		$res = proc_open($command, $io, $pipes, null, $env);
 
 		$this->test_token++;
 
