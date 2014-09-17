@@ -64,7 +64,7 @@ class Runner
 		$call_before = ['setUpBeforeClass', 'beforeAll'];
 		$call_after = ['afterAll', 'tearDownAfterClass'];
 
-		$this->classsetup_ok = $this->callMethods($call_before, true);
+		$this->classsetup_ok = $this->callMethods('\\'.$this->job['class'], $call_before, true);
 		
 		foreach ($this->job['methods'] as $method)
 		{
@@ -87,12 +87,12 @@ class Runner
 			}
 		}
 
-		$this->classteardown_ok = $this->callMethods($call_after, true);
+		$this->classteardown_ok = $this->callMethods('\\'.$this->job['class'], $call_after, true);
 
 		$this->log(['type' => 'successful_exit']);
 	}
 
-	public function callMethods(array $names, $tryStaticFirst = false)
+	public function callMethods($test_name, array $names, $tryStaticFirst = false)
 	{
 		$ok = true;
 		$obj = $this->getInstance();
@@ -121,7 +121,7 @@ class Runner
 				}
 			} catch (\Exception $e) {
 				$ok = false;
-				$this->logException($e, $name);
+				$this->logException($e, "$test_name :: $name");
 			}
 		}
 
@@ -158,28 +158,30 @@ class Runner
 		$call_before = ['setUp', 'beforeEach', 'before'.ucfirst($name)];
 		$call_after = ['after'.ucfirst($name), 'afterEach', 'tearDown'];
 
-		$setup_ok = $this->callMethods($call_before, false);
-		$execution_ok = false;
+		$max_attempts = $method['maxattempts'];
+		$attempt = 0;
 
-		$obj = $this->getInstance();
-
-		if ($setup_ok)
+		$done = false;
+		while ($attempt <= $max_attempts and !$done)
 		{
+			$attempt++;
 
-			$max_attempts = $method['maxattempts'];
-			$attempt = 1;
+			$setup_ok = $this->callMethods($test_name, $call_before, false);
+			$execution_ok = false;
 
-			while ($attempt <= $max_attempts)
+			$obj = $this->getInstance();
+
+			if ($setup_ok)
 			{
 				try {
 					$res = call_user_func_array([$obj, $name], $arguments);
 					$execution_ok = true;
-					break;
+					$done = true;
 				} catch (\Exception $e) {
 					if (isset($method['expectedException']) && ($e instanceof $method['expectedException']))
 					{
 						$execution_ok = true;
-						break;
+						$done = true;
 					}
 					else if ($attempt === $max_attempts)
 					{
@@ -193,19 +195,21 @@ class Runner
 					}
 					else
 					{
+						$this->logException($e, $test_name);
+
 						$this->log([
 							'test_name' => $test_name,
+							'step' => $test_name,
 							'type' => 'error',
 							'message' => 'Test failed, making another attempt ('.($attempt + 1).').'
 						]);
 						sleep(30);
 					}
-					$attempt++;
 				}
 			}
-		}
 
-		$teardown_ok = $this->callMethods($call_after, false);
+			$teardown_ok = $this->callMethods($test_name, $call_after, false);
+		}
 
 		$status = '?';
 

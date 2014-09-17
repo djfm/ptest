@@ -118,7 +118,7 @@ class RunnerManager
 
 		foreach ($this->errors as $n => $error)
 		{
-			echo sprintf("%d) %s\n\n", $n+1, $error['step']);
+			echo sprintf("%d) %s\n\n", $n+1, isset($error['step']) ? $error['step'] : '(unknown step)');
 			echo sprintf("\t%s\n\n", $error['message']);
 			if (isset($error['kind']) && $error['kind'] === 'exception')
 			{
@@ -234,6 +234,8 @@ class RunnerManager
 				$this->stdout[$pos] = file_get_contents($data['stdout_file']);
 				$this->stderr[$pos] = file_get_contents($data['stderr_file']);
 				$this->results[$pos] = [];
+
+				echo sprintf("\nplan %s:\n", $test_plan_file);
 
 				foreach (explode("\n", file_get_contents($data['output_file'])) as $line)
 				{
