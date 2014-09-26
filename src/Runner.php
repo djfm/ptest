@@ -162,7 +162,7 @@ class Runner
 		$attempt = 0;
 
 		$done = false;
-		while ($attempt <= $max_attempts and !$done)
+		while ($attempt < $max_attempts and !$done)
 		{
 			$attempt++;
 
@@ -183,7 +183,7 @@ class Runner
 						$execution_ok = true;
 						$done = true;
 					}
-					else if ($attempt === $max_attempts)
+					else if ($attempt === $max_attempts || ($e instanceof \PrestaShop\Exception\FailedTestException))
 					{
 						$on_exception = array($obj, 'onException');
 						if (is_callable($on_exception))
@@ -192,17 +192,17 @@ class Runner
 							call_user_func($on_exception, $e, $files_prefix);
 						}
 						$this->logException($e, $test_name);
+						$done = true;
 					}
 					else
 					{
-						$this->logException($e, $test_name);
-
+						/*
 						$this->log([
 							'test_name' => $test_name,
 							'step' => $test_name,
 							'type' => 'error',
 							'message' => 'Test failed, making another attempt ('.($attempt + 1).').'
-						]);
+						]);*/
 						sleep(30);
 					}
 				}
@@ -238,7 +238,11 @@ class Runner
 		$this->log([
 			'test_name' => $test_name,
 			'type' => 'result',
-			'status' => $status
+			'status' => $status,
+			'success' => $execution_ok,
+			'class' => $this->job['class'],
+			'method' => $method['method'],
+			'arguments' => $arguments
 		]);
 	}
 }

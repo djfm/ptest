@@ -149,8 +149,12 @@ class RunnerManager
 		}
 
 		echo "Execution Summary:\n";
+		$failures = 0;
 		foreach ($this->results as $result)
 		{
+			if (!$result['success'])
+				$failures++;
+
 			echo $result['status'];
 		}
 		echo "\n";
@@ -160,6 +164,32 @@ class RunnerManager
 		echo sprintf("Tests: %d, Errors: %d, Time: %dm:%ds\n", count($this->results), count($this->errors), $minutes, $seconds);
 
 		echo "\n";
+
+		// Make JUnit output
+		$testsuite = simplexml_load_string("<testsuite/>");
+		
+		$testsuite->addAttribute('failures', $failures);
+		$testsuite->addAttribute('tests', count($this->results));
+		$testsuite->addAttribute('time', $elapsed);
+
+		foreach ($this->results as $result)
+		{
+			$testcase = $testsuite->addChild('testcase');
+			$testcase->addAttribute('classname', $result['class']);
+			$testcase->addAttribute('name', $result['method']);
+			$testcase->addAttribute('status', $result['status']);
+			if (!$result['success'])
+			{
+				$err = $testcase->addChild('error', 'An error happened, but details are NIY.');
+			}
+		}
+
+		if (!is_dir('test-results'))
+			mkdir('test-results');
+
+		$dom = dom_import_simplexml($testsuite)->ownerDocument;
+		$dom->formatOutput = true;
+		file_put_contents('test-results/junit-report.xml', $dom->saveXML());
 
 		if (count($this->errors) === 0)
 			return 0;
