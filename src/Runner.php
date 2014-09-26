@@ -140,7 +140,11 @@ class Runner
 			$this->log([
 				'test_name' => $test_name,
 				'type' => 'result',
-				'status' => 'B'
+				'status' => 'B',
+				'success' => false,
+				'class' => $this->job['class'],
+				'method' => $method['method'],
+				'arguments' => $arguments
 			]);
 			return;
 		}
@@ -150,7 +154,11 @@ class Runner
 			$this->log([
 				'test_name' => $test_name,
 				'type' => 'result',
-				'status' => 'C'
+				'status' => 'C',
+				'success' => false,
+				'class' => $this->job['class'],
+				'method' => $method['method'],
+				'arguments' => $arguments
 			]);
 			return;
 		}
