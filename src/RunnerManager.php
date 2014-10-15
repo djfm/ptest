@@ -64,6 +64,7 @@ class RunnerManager
 		}
 
 		$this->started_at = time();
+		$last_keepalive = $this->started_at;
 
 		while (count($this->test_plans) > 0 || count($this->running_processes) > 0)
 		{
@@ -77,6 +78,11 @@ class RunnerManager
 			// If we're just waiting for processes to finish, slow down
 			if (count($this->test_plans) === 0 || count($this->running_processes) == $this->max_processes)
 				sleep(1);
+
+			if (getenv('TRAVIS_KEEPALIVE') && (time() > $last_keepalive + 30)) {
+				$last_keepalive = time();
+				echo 'Hi Travis, I\'m still there! -- '.strftime('%d %h %Y, %H:%M:%S')."\n";
+			}
 		}
 
 		return $this->afterRun();
