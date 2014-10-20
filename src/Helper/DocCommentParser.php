@@ -1,6 +1,6 @@
 <?php
 
-namespace PrestaShop\Ptest\Util;
+namespace PrestaShop\Ptest\Helper;
 
 class DocCommentParser
 {

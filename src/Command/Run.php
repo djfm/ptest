@@ -8,7 +8,7 @@ use Symfony\Component\Console\Input\InputInterface;
 use Symfony\Component\Console\Input\InputOption;
 use Symfony\Component\Console\Output\OutputInterface;
 
-class Runner extends Command
+class Run extends Command
 {
     protected function configure()
     {
@@ -31,22 +31,13 @@ class Runner extends Command
 
     protected function execute(InputInterface $input, OutputInterface $output)
     {
-        $test_case = $input->getArgument('test_class_or_directory');
+        $filters = [];
 
-        $discoverer = new \PrestaShop\Ptest\Discoverer(
-            $test_case,
-            $input->getOption('bootstrap'),
-            $input->getOption('filter'),
-            $input->getOption('data-provider-filter')
+        $runner = new \PrestaShop\Ptest\Runner();
+
+        $runner->setRoot(
+            $input->getArgument('test_class_or_directory')
         );
-
-        $test_plans = $discoverer->getTestPlans();
-
-        $runner = new \PrestaShop\Ptest\RunnerManager($test_plans, [
-            'bootstrap_file' => $input->getOption('bootstrap'),
-            'max_processes' => $input->getOption('processes'),
-            'only_display_info' => $input->getOption('info')
-        ]);
 
         exit($runner->run());
     }

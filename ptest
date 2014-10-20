@@ -1,6 +1,8 @@
 #!/usr/bin/env php
 <?php
 
+@ini_set('display_errors', 'on');
+
 $autoloads = [
 	__DIR__.'/vendor/autoload.php',
 	__DIR__.'/../../autoload.php'
@@ -18,5 +20,5 @@ foreach ($autoloads as $path)
 use Symfony\Component\Console\Application;
 
 $application = new Application();
-$application->add(new \PrestaShop\Ptest\Command\Runner());
+$application->add(new \PrestaShop\Ptest\Command\Run());
 $application->run();
