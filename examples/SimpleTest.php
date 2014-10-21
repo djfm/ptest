@@ -8,6 +8,7 @@ class SimpleTest implements \PrestaShop\Ptest\TestClass\Basic
 
 	/**
 	* @parallel
+	* @group A
 	*/
 	public function testStuffz()
 	{
@@ -15,28 +16,24 @@ class SimpleTest implements \PrestaShop\Ptest\TestClass\Basic
 	}
 
 	/**
-	* @parallel
+	* @group B
 	*/
 	public function testOtherStuffz()
 	{
 
 	}
 
-	public function beforeTestHello()
-	{
-		throw new \Exception('Grmbl!');
-	}
 	/**
-	* @parallel group 1
-	*/
-	public function testHello()
+	 * @group B
+	 */
+	public function scopedTest()
 	{
 
 	}
 
 	/**
 	* @test
-	* @parallel group 1
+	* @parallel
 	*/
 	public function forcedTest()
 	{
@@ -54,9 +51,16 @@ class SimpleTest implements \PrestaShop\Ptest\TestClass\Basic
 
 	/**
 	* @dataProvider lotsOfData
-	* @parallelize 4
 	*/
 	public function testWithDataProvider()
+	{
+
+	}
+
+	/**
+	 * @dataProvoder lotsOfData
+	 */
+	public function otherBigTest()
 	{
 
 	}

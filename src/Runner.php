@@ -10,6 +10,16 @@ class Runner
 	 */
 	private $root;
 
+	/**
+	 * The available loaders.
+	 */
+	private $loaders = [];
+
+	public function __construct()
+	{
+		$this->loaders[] = new \PrestaShop\Ptest\Loader\PHPUnitLike();
+	}
+
 	public function setRoot($root)
 	{
 		$this->root = $root;
@@ -40,8 +50,18 @@ class Runner
 
 	public function run()
 	{
-		$this->scan();
+		$callStacks = [];
 
-		echo "hi";
+		foreach ($this->scan() as $file) {
+			foreach ($this->loaders as $loader) {
+				$testable = $loader->load($file);
+				if ($testable) {
+					$callStacks = array_merge($callStacks, $testable->unroll());
+					break;
+				}
+			}
+		}
+
+		print_r($callStacks);
 	}
 }
