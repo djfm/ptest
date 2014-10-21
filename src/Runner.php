@@ -15,9 +15,16 @@ class Runner
 	 */
 	private $loaders = [];
 
+	private $maxProcesses = 1;
+
 	public function __construct()
 	{
 		$this->loaders[] = new \PrestaShop\Ptest\Loader\PHPUnitLike();
+	}
+
+	public function setMaxProcesses($p)
+	{
+		$this->maxProcesses = $p;
 	}
 
 	public function setRoot($root)
@@ -48,7 +55,7 @@ class Runner
 		return $files;
 	}
 
-	public function run()
+	public function getCallStacks()
 	{
 		$callStacks = [];
 
@@ -62,6 +69,63 @@ class Runner
 			}
 		}
 
-		print_r($callStacks);
+		return $callStacks;
+	}
+
+	public function run()
+	{
+		$this->runningProcesses = [];
+		$this->stacks = $this->getCallStacks();
+		$s = 0;
+
+		while ($s < count($this->stacks) || !empty($this->runningProcesses)) {
+
+			$this->checkRunningProcesses();
+
+			if ($s < count($this->stacks)) {
+				if (count($this->runningProcesses) < $this->maxProcesses) {
+					$this->startProcess($s);
+					$s += 1;
+				} else {
+					sleep(1);
+				}
+
+			} else {
+				sleep(1);
+			}
+		}
+		// PHP_BINARY
+	}
+
+	public function startProcess($n)
+	{
+		echo 'Starting process '.($n+1).' of '.count($this->stacks)."!\n";
+
+		$infile = tempnam(null, 'ptest_input');
+		$outfile = tempnam(null, 'ptest_output');
+
+		$cmd = PHP_BINARY.' '.realpath(__DIR__.'/../worker').' '.escapeshellarg($infile).' '.escapeshellarg($outfile);
+
+		echo "$cmd\n";
+
+		$descriptorspec = [STDIN, STDOUT, STDERR];
+
+		$pipes = [];
+
+		$process = proc_open($cmd, $descriptorspec, $pipes);
+
+		$this->runningProcesses[] = [
+			'process' => $process
+		];
+	}
+
+	public function checkRunningProcesses()
+	{
+		foreach ($this->runningProcesses as $n => $process) {
+			if (!proc_get_status($process['process'])['running']) {
+				echo "(subprocess finished)\n";
+				unset($this->runningProcesses[$n]);
+			}
+		}
 	}
 }

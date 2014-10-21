@@ -8,12 +8,12 @@ use Symfony\Component\Console\Input\InputInterface;
 use Symfony\Component\Console\Input\InputOption;
 use Symfony\Component\Console\Output\OutputInterface;
 
-class Run extends Command
+class Work extends Command
 {
     protected function configure()
     {
         $this
-            ->setName('run')
+            ->setName('work')
             ->setDescription('Run one specific test case or everything within a folder')
             ->addArgument(
                 'test_class_or_directory',
@@ -34,8 +34,6 @@ class Run extends Command
         $filters = [];
 
         $runner = new \PrestaShop\Ptest\Runner();
-
-        $runner->setMaxProcesses(max(1, (int)$input->getOption('processes')));
 
         $runner->setRoot(
             $input->getArgument('test_class_or_directory')
