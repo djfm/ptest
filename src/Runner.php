@@ -17,14 +17,34 @@ class Runner
 
 	private $maxProcesses = 1;
 
+	private $dataProviderFilter;
+
 	public function __construct()
 	{
-		$this->loaders[] = new \PrestaShop\Ptest\Loader\PHPUnitLike();
+		
+	}
+
+	public function initLoaders()
+	{
+		$this->loaders = [];
+
+		$phpunit = new \PrestaShop\Ptest\Loader\PHPUnitLike();
+
+		$this->loaders[] = $phpunit;
+
+		foreach ($this->loaders as $loader) {
+			$loader->setDataProviderFilter($this->dataProviderFilter);
+		}
 	}
 
 	public function setMaxProcesses($p)
 	{
 		$this->maxProcesses = $p;
+	}
+
+	public function setDataProviderFilter($z)
+	{
+		$this->dataProviderFilter = $z;
 	}
 
 	public function setRoot($root)
@@ -57,6 +77,8 @@ class Runner
 
 	public function getCallStacks()
 	{
+		$this->initLoaders();
+		
 		$callStacks = [];
 
 		foreach ($this->scan() as $file) {
@@ -99,31 +121,71 @@ class Runner
 
 	public function startProcess($n)
 	{
-		echo 'Starting process '.($n+1).' of '.count($this->stacks)."!\n";
+		echo '>>> Starting process '.($n+1).' of '.count($this->stacks)."!\n";
 
 		$infile = tempnam(null, 'ptest_input');
 		$outfile = tempnam(null, 'ptest_output');
 
 		$cmd = PHP_BINARY.' '.realpath(__DIR__.'/../worker').' '.escapeshellarg($infile).' '.escapeshellarg($outfile);
 
-		echo "$cmd\n";
-
 		$descriptorspec = [STDIN, STDOUT, STDERR];
 
 		$pipes = [];
 
+		file_put_contents($infile, json_encode($this->stacks[$n], JSON_PRETTY_PRINT));
+
 		$process = proc_open($cmd, $descriptorspec, $pipes);
 
 		$this->runningProcesses[] = [
-			'process' => $process
+			'process' => $process,
+			'infile' => $infile,
+			'outfile' => $outfile,
+			'position' => $n
 		];
+	}
+
+	public function handleMessage($process, $message)
+	{
+		if (is_scalar($message)) {
+			echo "$message\n";
+		} else {
+			if (isset($message['type'])) {
+				if ($message['type'] === 'log') {
+					echo sprintf("::: Process %'04d says: %s\n", $process['position'] + 1, $message['message']);
+				}
+			}
+		}
 	}
 
 	public function checkRunningProcesses()
 	{
 		foreach ($this->runningProcesses as $n => $process) {
+
+			$h = fopen($process['outfile'], 'r+');
+			flock($h, LOCK_EX);
+
+			$size = filesize($process['outfile']);
+
+			if ($size > 0) {
+				$contents = fread($h, $size);
+
+				foreach (explode("\n", $contents) as $line) {
+					if ($line) {
+						$message = @json_decode($line, true);
+						if ($message) {
+							$this->handleMessage($process, $message);
+						}
+					}
+				}
+
+				ftruncate($h, 0);
+			}
+
+			flock($h, LOCK_UN);
+			fclose($h);
+
 			if (!proc_get_status($process['process'])['running']) {
-				echo "(subprocess finished)\n";
+				echo "<<< Subprocess ".($process['position'] + 1)." finished!\n";
 				unset($this->runningProcesses[$n]);
 			}
 		}

@@ -9,6 +9,13 @@ use PrestaShop\Ptest\Helper\DocCommentParser;
 
 class PHPUnitLike
 {
+	private $dataProviderFilter = array();
+
+	public function setDataProviderFilter($filter)
+	{
+		$this->dataProviderFilter = $filter;
+	}
+
 	public function load(\SplFileInfo $file)
 	{
 		if ($file->getExtension() !== 'php') {
@@ -55,11 +62,36 @@ class PHPUnitLike
 				$args = [[]];
 
 				if (($dataProvider = $dcp->getOption('dataProvider'))) {
-					$args = array_map(function($args) {
-						return array_map(function($arg) {
-							return ['value' => $arg];
-						}, $args);
-					}, (new $className())->$dataProvider());
+
+					$args = [];
+					foreach ((new $className())->$dataProvider() as $values) {
+						$v = [];
+
+						$keep = true;
+
+						foreach ($values as $i => $value) {
+
+							foreach ($this->dataProviderFilter as $z) {
+								list($methodName, $filters) = explode(':', $z, 2);
+
+								if ($methodName === $method->getName()) {
+									$filters = explode(',', $filters);
+									if (isset($filters[$i])) {
+										if (!is_scalar($value) || !preg_match('/'.$filters[$i].'/', (string)$value)) {
+											$keep = false;
+											break 2;
+										}
+									}									
+								}
+							}
+
+							$v[] = ['value' => $value];
+						}
+
+						if ($keep) {
+							$args[] = $v;
+						}
+					}
 
 					if ($dcp->hasOption('parallelize')) {
 						$test->setParallelizable(true);
