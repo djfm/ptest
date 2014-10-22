@@ -43,7 +43,10 @@ class PHPUnitLike
 		$defaultGroupName = $className;
 
 		$root = new Group(null, Group::PARALLEL);
-		$root->setWrappers(array($className, 'setupBeforeClass', null, true), array($className, 'tearDownAfterClass', null, true));
+		$root->setWrappers(
+			[$path, $className, 'setupBeforeClass', null, true],
+			[$path, $className, 'tearDownAfterClass', null, true]
+		);
 		
 		$groups = [];
 
@@ -58,6 +61,8 @@ class PHPUnitLike
 
 				$dcp = new DocCommentParser($method->getDocComment());
 				$groupName = $dcp->getOption('group', $defaultGroupName);
+
+				$test->setMaxAttempts($dcp->getOption('maxattempts', 2));
 
 				$args = [[]];
 
@@ -111,8 +116,8 @@ class PHPUnitLike
 				$test->setExamples($args);
 
 				$test->setWrappers(
-					array($className, 'setUp', null, false),
-					array($className, 'tearDown', null, false)
+					array($path, $className, 'setUp', null, false),
+					array($path, $className, 'tearDown', null, false)
 				);
 
 

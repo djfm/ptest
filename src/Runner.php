@@ -19,6 +19,8 @@ class Runner
 
 	private $dataProviderFilter;
 
+	private $informationOnly = false;
+
 	public function __construct()
 	{
 		
@@ -45,6 +47,11 @@ class Runner
 	public function setDataProviderFilter($z)
 	{
 		$this->dataProviderFilter = $z;
+	}
+
+	public function setInformationOnly($yes = false)
+	{
+		$this->informationOnly = $yes;
 	}
 
 	public function setRoot($root)
@@ -78,7 +85,7 @@ class Runner
 	public function getCallStacks()
 	{
 		$this->initLoaders();
-		
+
 		$callStacks = [];
 
 		foreach ($this->scan() as $file) {
@@ -98,10 +105,27 @@ class Runner
 	{
 		$this->runningProcesses = [];
 		$this->stacks = $this->getCallStacks();
+
+		$testsCount = 0;
+		foreach ($this->stacks as $stack) {
+			foreach ($stack as $call) {
+				if ($call['type'] === 'test') {
+					$testsCount += 1;
+				}
+			}
+		}
+
+		
+		echo sprintf("\nFound %1\$d tests (split into %2\$d test plan(s))!\n", $testsCount, count($this->stacks));
+		echo sprintf("Going to run them %d at a time - when possible.\n", $this->maxProcesses);
+		
+		if ($this->informationOnly) {
+			return;
+		}
+
 		$s = 0;
 
 		while ($s < count($this->stacks) || !empty($this->runningProcesses)) {
-
 			$this->checkRunningProcesses();
 
 			if ($s < count($this->stacks)) {
@@ -116,7 +140,6 @@ class Runner
 				sleep(1);
 			}
 		}
-		// PHP_BINARY
 	}
 
 	public function startProcess($n)
@@ -184,8 +207,11 @@ class Runner
 			flock($h, LOCK_UN);
 			fclose($h);
 
-			if (!proc_get_status($process['process'])['running']) {
-				echo "<<< Subprocess ".($process['position'] + 1)." finished!\n";
+			$status = proc_get_status($process['process']);
+
+			if (!$status['running']) {
+				$code = $status['exitcode'] === 0 ? '[ OK ]' : "[ FAIL ({$status['exitcode']}) ]";
+				echo "<<< Subprocess ".($process['position'] + 1)." finished! $code\n";
 				unset($this->runningProcesses[$n]);
 			}
 		}

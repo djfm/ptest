@@ -9,6 +9,7 @@ class SingleTest extends Testable
 	private $methodName;
 	private $examples;
 	private $parallelizable;
+	private $maxAttempts = 1;
 
 	public function setFileName($fileName)
 	{
@@ -45,11 +46,21 @@ class SingleTest extends Testable
 		return $this;
 	}
 
+	public function setMaxAttempts($n)
+	{
+		$this->maxAttempts = $n;
+
+		return $this;
+	}
+
 	public function getCall($example)
 	{
 		return [
 			'type' => 'test',
-			'call' => [$this->className, $this->methodName, $example, false]
+			'call' => [$this->fileName, $this->className, $this->methodName, $example, false],
+			'before' => $this->getBeforeCall(),
+			'after' => $this->getAfterCall(),
+			'maxAttempts' => $this->maxAttempts
 		];
 	}
 
@@ -59,36 +70,14 @@ class SingleTest extends Testable
 
 		if ($this->parallelizable) {
 			foreach ($this->examples as $example) {
-				$callStack = [];
-
-				if (($b = $this->getBeforeCall())) {
-					$callStack[] = $b;
-				}
-
-				$callStack[] = $this->getCall($example);
-
-				if (($a = $this->getAfterCall())) {
-					$callStack[] = $a;
-				}
-
-				$callStacks[] = $callStack;
+				$callStacks[] = [$this->getCall($example)];
 			}
 		} else {
 			$callStack = [];
 			foreach ($this->examples as $example) {
-				
-				if (($b = $this->getBeforeCall())) {
-					$callStack[] = $b;
-				}
-
 				$callStack[] = $this->getCall($example);
-
-				if (($a = $this->getAfterCall())) {
-					$callStack[] = $a;
-				}
-
 			}
-			
+
 			$callStacks[] = $callStack;
 		}
 

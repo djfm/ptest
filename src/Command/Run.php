@@ -45,6 +45,10 @@ class Run extends Command
             $input->getOption('data-provider-filter')
         );
 
+        $runner->setInformationOnly(
+            $input->getOption('info')
+        );
+
 
         exit($runner->run());
     }
