@@ -318,8 +318,8 @@ class Runner
 	public function printSerializedException($e, $padding='')
 	{
 		echo sprintf(
-			"{$padding}At line %d in file `%s`:\n{$padding}\t%s\n",
-			$e['line'], $e['file'], $e['message']
+			"{$padding}[%s] At line %d in file `%s`:\n{$padding}\t%s\n",
+			$e['class'], $e['line'], $e['file'], $e['message']
 		);
 	}
 

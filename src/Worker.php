@@ -69,7 +69,9 @@ class Worker
 			try {
 				$this->call($stack['after']['call']);
 			} catch (\Exception $e) {
-				$ok = false;
+				if ($ok) {
+					$ok = false;
+				}
 			}
 		}
 
@@ -84,8 +86,13 @@ class Worker
 			$ok = $this->doProcessStack($stack, $logErrors = ($attempt + 1 >= $maxAttempts));
 			if ($ok) {
 				return true;
-			} else {
+			} elseif ($ok === false) {
 				$this->log('Retrying current stack...');
+			} else {
+				// if doProcessStack returned a falsey value
+				// that is not === false, then by convention
+				// we don't retry
+				break;
 			}
 		}
 
@@ -106,6 +113,7 @@ class Worker
 			'type' => 'test-error',
 			'test' => $test,
 			'exception' => [
+				'class' => get_class($e),
 				'message' => $e->getMessage(),
 				'file' => $e->getFile(),
 				'line' => $e->getLine(),
@@ -114,6 +122,11 @@ class Worker
 		]);
 	}
 
+	/**
+	 * Returns true in case of success,
+	 * false when failed but test may be retried,
+	 * null when failed but test may not be retried.
+	 */
 	public function processTest(array $test, $logErrors)
 	{
 		$ok = true;
@@ -125,6 +138,15 @@ class Worker
 				// that's OK
 			} else {
 				$ok = false;
+
+				$marksUndeniableTestFailure = [$e, 'marksUndeniableTestFailure'];
+				$reallyDead = is_callable($marksUndeniableTestFailure) && $marksUndeniableTestFailure();
+
+				if ($reallyDead) {
+					$logErrors = true;
+					$ok = null;
+				}
+
 				if ($logErrors) {
 					$this->logException($test, $e);
 				}
