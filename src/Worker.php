@@ -31,6 +31,113 @@ class Worker
 		]);
 	}
 
+	public function work()
+	{
+		$this->stack = json_decode(
+			file_get_contents($this->infile),
+			true
+		);
+
+		$ok = $this->processStack($this->stack, $logErrors = true);
+
+		return $ok ? 0 : 1;
+	}
+
+	public function doProcessStack(array $stack, $logErrors)
+	{
+		$ok = true;
+
+		if ($stack['before']) {
+			try {
+				$this->call($stack['before']['call']);
+			} catch (\Exception $e) {
+				$ok = false;
+			}
+		}
+
+		if ($ok) {
+			foreach ($stack['stack'] as $item) {
+				if ($item['type'] === 'test') {
+					$ok = $this->processTest($item, $logErrors);
+				} elseif ($item['type'] === 'stack') {
+					$ok = $this->processStack($item, $logErrors);
+				}
+			}
+		}
+
+		if ($stack['after']) {
+			try {
+				$this->call($stack['after']['call']);
+			} catch (\Exception $e) {
+				$ok = false;
+			}
+		}
+
+		return $ok;
+	}
+
+	public function processStack(array $stack, $logErrors)
+	{
+		$maxAttempts = isset($stack['maxAttempts']) ? (int)$stack['maxAttempts'] : 1;
+
+		for ($attempt = 0; $attempt < $maxAttempts; $attempt += 1) {
+			$ok = $this->doProcessStack($stack, $logErrors = ($attempt + 1 >= $maxAttempts));
+			if ($ok) {
+				return true;
+			} else {
+				$this->log('Retrying current stack...');
+			}
+		}
+
+		return false;
+	}
+
+	public function logSuccess($test)
+	{
+		$this->sendMessage([
+			'type' => 'test-success',
+			'test' => $test
+		]);
+	}
+
+	public function logException($test, \Exception $e)
+	{
+		$this->sendMessage([
+			'type' => 'test-error',
+			'test' => $test,
+			'exception' => [
+				'message' => $e->getMessage(),
+				'file' => $e->getFile(),
+				'line' => $e->getLine(),
+				'trace' => $e->getTrace()
+			]
+		]);
+	}
+
+	public function processTest(array $test, $logErrors)
+	{
+		$ok = true;
+
+		try {
+			$this->call($test['call']);
+		} catch (\Exception $e) {
+			if (isset($item['expectedException']) && $e instanceof $item['expectedException']) {
+				// that's OK
+			} else {
+				$ok = false;
+				if ($logErrors) {
+					$this->logException($test, $e);
+				}
+			}
+		}
+
+		if ($ok) {
+			$this->logSuccess($test);
+		}
+
+		return $ok;
+	}
+
 	public function call($callDescription)
 	{
 		list($fileName, $className, $methodName, $arguments, $isStatic) = $callDescription;
@@ -60,83 +167,10 @@ class Worker
 		}
 		
 		if ($isStatic) {
-			return call_user_func_array([$className, $methodName], $args);
+			// return call_user_func_array([$className, $methodName], $args);
 		} else {
-			return call_user_func_array([new $className(), $methodName], $args);
+			// return call_user_func_array([new $className(), $methodName], $args);
 		}
 
-	}
-
-	public function work()
-	{
-		$this->stack = json_decode(file_get_contents($this->infile), true);
-
-		foreach ($this->stack as $step) {
-
-			if ($step['type'] === 'wrapper') {
-
-				$this->call($step['call']);
-
-			} elseif ($step['type'] === 'test') {
-
-				$maxAttempts = isset($step['maxAttempts']) ? $step['maxAttempts'] : 1; 
-
-				for ($attempt = 0; $attempt < $maxAttempts; $attempt++)
-				{
-					$canceled = false;
-
-					if ($step['before']) {
-						try {
-							$this->call($step['before']['call']);
-						} catch (\Exception $e) {
-							$canceled = true;
-							// TODO: log error
-						}
-					}
-
-					$success = false;
-
-					try {
-
-						if (!$canceled) {
-
-							$this->call($step['call']);
-							$success = true;
-
-						} else {
-
-							// TODO: log cancelled
-
-						}
-
-					} catch (\Exception $e) {
-						
-						$marksUndeniableTestFailure = [$e, 'marksUndeniableTestFailure'];
-						$canRetry = !is_callable($marksUndeniableTestFailure) || !$marksUndeniableTestFailure();
-						
-						if (!$canRetry || $attempt >= $maxAttempts) {
-							
-							// TODO: log error
-							
-							$canceled = true;
-
-						}
-
-					}
-
-					if ($step['after']) {
-						try {
-							$this->call($step['after']['call']);
-						} catch (\Exception $e) {
-							// TODO: log error
-						}
-					}
-
-					if ($success || $canceled) {
-						break;
-					}
-				}
-			}
-		}
 	}
 }

@@ -102,32 +102,32 @@ class Runner
 		return $callStacks;
 	}
 
-	public function countTests(array $callStack)
+	public function countAndNumberTests(array &$callStack)
 	{
-		$count = 0;
-		foreach ($callStack['stack'] as $elem) {
+		foreach ($callStack['stack'] as $i => $elem) {
 			if ($elem['type'] === 'test') {
-				$count += 1;
+				$callStack['stack'][$i]['position'] = $this->testsCount;
+				$this->testsCount += 1;
 			} elseif ($elem['type'] === 'stack') {
-				$count += $this->countTests($elem);
+				$this->countAndNumberTests($callStack['stack'][$i]);
 			}
 		}
-		return $count;
 	}
 
 	public function run()
 	{
 		$this->runningProcesses = [];
 		$this->stacks = $this->getCallStacks();
+		$this->results = [];
 
 		$this->testsCount = 0;
-		foreach ($this->stacks as $stack) {
-			$this->testsCount += $this->countTests($stack);
+		$this->testsFinishedCount = 0;
+		foreach ($this->stacks as $i => $stack) {
+			$this->countAndNumberTests($this->stacks[$i]);
 		}
 
-		
 		echo sprintf("\nFound %1\$d tests (split into %2\$d test plan(s))!\n", $this->testsCount, count($this->stacks));
-		echo sprintf("Going to run them %d at a time - when possible.\n", $this->maxProcesses);
+		echo sprintf("Going to run them %d at a time - when possible.\n\n", $this->maxProcesses);
 		
 		if ($this->informationOnly) {
 			return;
@@ -150,6 +150,22 @@ class Runner
 				sleep(1);
 			}
 		}
+
+		return $this->afterRun();
+	}
+
+	public function afterRun()
+	{
+		echo "\n\nAll processes finished.\n";
+
+		for ($p = 0; $p < $this->testsCount; $p += 1) {
+			if (isset($this->results[$p])) {
+				echo $this->results[$p]['statusChar'];
+			} else {
+				echo "?";
+			}
+		}
+		echo "\n";
 	}
 
 	public function startProcess($n)
@@ -177,6 +193,27 @@ class Runner
 		];
 	}
 
+	public function makeTestShortName($test)
+	{
+		if(isset($test['call'][3])) {
+			$args = array_map(function($v) {
+				return isset($v['value']) ? json_encode($v['value']) : $v['reference'];
+			}, $test['call'][3]);
+
+			$args = implode(', ', $args);
+		} else {
+			$args = '';
+		}
+
+
+		return sprintf(
+			"%s::%s(%s)",
+			$test['call'][1],
+			$test['call'][2],
+			$args
+		);
+	}
+
 	public function handleMessage($process, $message)
 	{
 		if (is_scalar($message)) {
@@ -184,10 +221,53 @@ class Runner
 		} else {
 			if (isset($message['type'])) {
 				if ($message['type'] === 'log') {
-					echo sprintf("::: Process %'04d says: %s\n", $process['position'] + 1, $message['message']);
+					if (is_string($message['message'])) {
+						echo sprintf("::: Process %'04d says: %s\n", $process['position'] + 1, $message['message']);
+					} else {
+						echo sprintf(
+							"::: Process %'04d says:\n%s\n\n", $process['position'] + 1,
+							json_encode($message['message'], JSON_PRETTY_PRINT)
+						);
+					}
+				} elseif ($message['type'] === 'test-success') {
+					$this->testsFinishedCount += 1;
+					echo sprintf(
+						"\n:-) Test %s completed with success! (%s)\n\n",
+						$this->makeTestShortName($message['test']),
+						$this->getProgressString()
+					);
+
+					$this->results[$message['test']['position']] = ['statusChar' => '.'];
+
+				} elseif ($message['type'] === 'test-error') {
+					$this->testsFinishedCount += 1;
+					echo sprintf(
+						"\n:+( Test %s failed! (%s)\n",
+						$this->makeTestShortName($message['test']),
+						$this->getProgressString()
+					);
+					$this->printSerializedException($message['exception']);
+					echo "\n";
+
+					$this->results[$message['test']['position']] = ['statusChar' => 'E'];
 				}
 			}
 		}
+	}
+
+	public function getProgressString()
+	{
+		return sprintf(
+			"finished %d/%d tests (%.2f%%)",
+			$this->testsFinishedCount,
+			$this->testsCount,
+			(100 * $this->testsFinishedCount) / $this->testsCount
+		);
+	}
+
+	public function printSerializedException($e)
+	{
+		echo sprintf("At line %d in file `%s`:\n\t%s\n", $e['line'], $e['file'], $e['message']);
 	}
 
 	public function checkRunningProcesses()

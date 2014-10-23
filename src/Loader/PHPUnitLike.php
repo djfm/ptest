@@ -103,6 +103,12 @@ class PHPUnitLike
 					}
 				}
 
+				if ($dcp->hasOption('expectedException')) {
+					$test->setExpectedException(
+						$dcp->getOption('expectedException')
+					);
+				}
+
 				if (($depends = $dcp->getOption('depends'))) {
 					$argsFromDepends = array_map(function($a) {
 						return ['reference' => $a];

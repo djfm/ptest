@@ -9,6 +9,7 @@ class SingleTest extends Testable
 	private $methodName;
 	private $examples;
 	private $parallelizable;
+	private $expectedException;
 	private $maxAttempts = 1;
 
 	public function setFileName($fileName)
@@ -46,6 +47,12 @@ class SingleTest extends Testable
 		return $this;
 	}
 
+	public function setExpectedException($class) {
+		$this->expectedException = $class;
+
+		return $this;
+	}
+
 	public function setMaxAttempts($n)
 	{
 		$this->maxAttempts = $n;
@@ -59,10 +66,11 @@ class SingleTest extends Testable
 			'type' => 'stack',
 			'before' => $this->getBeforeCall(),
 			'after' => $this->getAfterCall(),
+			'maxAttempts' => $this->maxAttempts,
 			'stack' => [[
 				'type' => 'test',
-				'call' => [$this->fileName, $this->className, $this->methodName, $example, false],
-				'maxAttempts' => $this->maxAttempts
+				'expectedException' => $this->expectedException,
+				'call' => [$this->fileName, $this->className, $this->methodName, $example, false]
 			]]
 		];
 	}

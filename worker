@@ -2,7 +2,6 @@
 <?php
 
 require __DIR__.'/find_autoload.php';
-
 $worker = new \PrestaShop\Ptest\Worker($argv[1], $argv[2]);
 
-exit($worker->work());
+exit((int)$worker->work());
