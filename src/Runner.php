@@ -116,6 +116,7 @@ class Runner
 
 	public function run()
 	{
+		$this->startedAt = time();
 		$this->runningProcesses = [];
 		$this->stacks = $this->getCallStacks();
 		$this->results = [];
@@ -156,16 +157,60 @@ class Runner
 
 	public function afterRun()
 	{
-		echo "\n\nAll processes finished.\n";
+		$elapsed = time() - $this->startedAt;
+		$minutes = floor($elapsed / 60);
+		$seconds = $elapsed - 60 * $minutes;
+
+
+		echo sprintf(
+			"\n\nFinished %d tests in %d minutes and %d seconds.\n",
+			$this->testsCount,
+			$minutes,
+			$seconds
+		);
+
+		$unknownCount = 0;
+		$errors = [];
 
 		for ($p = 0; $p < $this->testsCount; $p += 1) {
 			if (isset($this->results[$p])) {
 				echo $this->results[$p]['statusChar'];
+				if (isset($this->results[$p]['error'])) {
+					$errors[] = $this->results[$p]['error'];
+				}
 			} else {
+				$unknownCount += 1;
 				echo "?";
 			}
 		}
-		echo "\n";
+		echo "\n\n";
+
+		if ($unknownCount > 0) {
+			echo "WARNING: $unknownCount tests did not yield a status, the processes probably died for some reason.\n";
+		}
+
+		if (count($errors) > 0) {
+			echo sprintf(
+				"ATTENTION: there were %d error(s)!\n\n",
+				count($errors)
+			);
+			foreach ($errors as $n => $error) {
+				echo sprintf(
+					"%d) %s:\n\n",
+					$n + 1,
+					$error['test-name']
+				);
+				$this->printSerializedException($error, ">>\t\t");
+				echo "\n\n";
+			}
+		}
+		
+
+		if ($unknownCount > 0 || count($errors) > 0) {
+			return 1;
+		} else {
+			return 0;
+		}
 	}
 
 	public function startProcess($n)
@@ -249,7 +294,12 @@ class Runner
 					$this->printSerializedException($message['exception']);
 					echo "\n";
 
-					$this->results[$message['test']['position']] = ['statusChar' => 'E'];
+					$error = $message['exception'];
+					$error['test-name'] = $this->makeTestShortName($message['test']);
+					$this->results[$message['test']['position']] = [
+						'statusChar' => 'E',
+						'error' => $error
+					];
 				}
 			}
 		}
@@ -265,9 +315,12 @@ class Runner
 		);
 	}
 
-	public function printSerializedException($e)
+	public function printSerializedException($e, $padding='')
 	{
-		echo sprintf("At line %d in file `%s`:\n\t%s\n", $e['line'], $e['file'], $e['message']);
+		echo sprintf(
+			"{$padding}At line %d in file `%s`:\n{$padding}\t%s\n",
+			$e['line'], $e['file'], $e['message']
+		);
 	}
 
 	public function checkRunningProcesses()
