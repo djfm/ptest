@@ -167,9 +167,9 @@ class Worker
 		}
 		
 		if ($isStatic) {
-			// return call_user_func_array([$className, $methodName], $args);
+			return call_user_func_array([$className, $methodName], $args);
 		} else {
-			// return call_user_func_array([new $className(), $methodName], $args);
+			return call_user_func_array([new $className(), $methodName], $args);
 		}
 
 	}
