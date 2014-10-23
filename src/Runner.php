@@ -197,6 +197,7 @@ class Runner
 			$h = fopen($process['outfile'], 'r+');
 			flock($h, LOCK_EX);
 
+			clearstatcache(); // WE NEED THIS
 			$size = filesize($process['outfile']);
 
 			if ($size > 0) {
