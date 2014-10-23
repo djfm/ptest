@@ -52,11 +52,13 @@ class Group extends Testable
 				if ($callStacks === null) {
 					$callStacks = $childCallStacks;
 				} else {
-					foreach ($callStacks as $i => $callStack) {
+					$newCallStacks = [];
+					foreach ($callStacks as $callStack) {
 						foreach ($childCallStacks as $childCallStack) {
-							$callStacks[$i] = array_merge($callStack, $childCallStack);
+							$newCallStacks[] = array_merge($callStack, $childCallStack);
 						}
 					}
+					$callStacks = $newCallStacks;
 				}
 			}
 
