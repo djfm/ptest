@@ -51,7 +51,7 @@ abstract class Testable
 	{
 		if ($this->beforeWrapper) {
 			return [
-				'type' => 'wrapper',
+				'type' => 'call',
 				'call' => $this->beforeWrapper
 			];
 		}
@@ -63,7 +63,7 @@ abstract class Testable
 	{
 		if ($this->afterWrapper) {
 			return [
-				'type' => 'wrapper',
+				'type' => 'call',
 				'call' => $this->afterWrapper
 			];
 		}
@@ -72,7 +72,13 @@ abstract class Testable
 	}
 
 	/**
-	 * Returns an array of callstacks
+	 * Returns an array of callstacks.
+	 * What we call a callstack is an array with:
+	 * - type: "stack" - always
+	 * - before: optional wrapper to run before
+	 * - after: optional wrapper to run after
+	 * - stack: the things to run,
+	 *   may be callstacks themselves, or objects with type "test" 
 	 */
 	abstract public function unroll();
 }

@@ -40,46 +40,36 @@ class Group extends Testable
 
 		if ($this->type === Group::SEQUENCE) {
 
-			$callStacks = null;
-
-			if (($b = $this->getBeforeCall())) {
-				$callStacks = [[$b]];
-			}
-
 			foreach ($this->getChildren() as $child) {
 				$childCallStacks = $child->unroll();
 
-				if ($callStacks === null) {
-					$callStacks = $childCallStacks;
+				if (empty($unrolled)) {
+					$unrolled = $childCallStacks;
 				} else {
-					$newCallStacks = [];
-					foreach ($callStacks as $callStack) {
-						foreach ($childCallStacks as $childCallStack) {
-							$newCallStacks[] = array_merge($callStack, $childCallStack);
+					$newUnrolled = [];
+					foreach ($unrolled as $prev) {
+						foreach ($childCallStacks as $next) {
+							$newUnrolled[] = [
+								'type' => 'stack',
+								'stack' => [$prev, $next],
+								'before' => $this->getBeforeCall(),
+								'after' => $this->getAfterCall()
+							];
 						}
 					}
-					$callStacks = $newCallStacks;
+					$unrolled = $newUnrolled;
 				}
 			}
-
-			if (($a = $this->getAfterCall())) {
-				foreach ($callStacks as $i => $callStack) {
-					$callStacks[$i][] = $a;
-				}
-			}
-
-			$unrolled = $callStacks;
 
 		} elseif ($this->type === GROUP::PARALLEL) {
 			foreach ($this->getChildren() as $child) {
 				foreach ($child->unroll() as $callStack) {
-					if (($b = $this->getBeforeCall())) {
-						array_unshift($callStack, $b);
-					}
-					if (($a = $this->getAfterCall())) {
-						$callStack[] = $a;
-					}
-					$unrolled[] = $callStack;
+					$unrolled[] = [
+						'type' => 'stack',
+						'stack' => [$callStack],
+						'before' => $this->getBeforeCall(),
+						'after' => $this->getAfterCall()
+					];
 				}
 			}
 		}

@@ -53,14 +53,17 @@ class SingleTest extends Testable
 		return $this;
 	}
 
-	public function getCall($example)
+	public function getStack($example)
 	{
 		return [
-			'type' => 'test',
-			'call' => [$this->fileName, $this->className, $this->methodName, $example, false],
+			'type' => 'stack',
 			'before' => $this->getBeforeCall(),
 			'after' => $this->getAfterCall(),
-			'maxAttempts' => $this->maxAttempts
+			'stack' => [[
+				'type' => 'test',
+				'call' => [$this->fileName, $this->className, $this->methodName, $example, false],
+				'maxAttempts' => $this->maxAttempts
+			]]
 		];
 	}
 
@@ -70,15 +73,22 @@ class SingleTest extends Testable
 
 		if ($this->parallelizable) {
 			foreach ($this->examples as $example) {
-				$callStacks[] = [$this->getCall($example)];
+				$callStacks[] = $this->getStack($example);
 			}
 		} else {
-			$callStack = [];
+
+			$stack = [
+				'type' => 'stack',
+				'before' => null,
+				'after' => null,
+				'stack' => []
+			];
+
 			foreach ($this->examples as $example) {
-				$callStack[] = $this->getCall($example);
+				$stack['stack'][] = $this->getStack($example);
 			}
 
-			$callStacks[] = $callStack;
+			$callStacks[] = $stack;
 		}
 
 		return $callStacks;

@@ -87,6 +87,7 @@ class Runner
 		$this->initLoaders();
 
 		$callStacks = [];
+		$this->testsCount = 0;
 
 		foreach ($this->scan() as $file) {
 			foreach ($this->loaders as $loader) {
@@ -101,22 +102,31 @@ class Runner
 		return $callStacks;
 	}
 
+	public function countTests(array $callStack)
+	{
+		$count = 0;
+		foreach ($callStack['stack'] as $elem) {
+			if ($elem['type'] === 'test') {
+				$count += 1;
+			} elseif ($elem['type'] === 'stack') {
+				$count += $this->countTests($elem);
+			}
+		}
+		return $count;
+	}
+
 	public function run()
 	{
 		$this->runningProcesses = [];
 		$this->stacks = $this->getCallStacks();
 
-		$testsCount = 0;
+		$this->testsCount = 0;
 		foreach ($this->stacks as $stack) {
-			foreach ($stack as $call) {
-				if ($call['type'] === 'test') {
-					$testsCount += 1;
-				}
-			}
+			$this->testsCount += $this->countTests($stack);
 		}
 
 		
-		echo sprintf("\nFound %1\$d tests (split into %2\$d test plan(s))!\n", $testsCount, count($this->stacks));
+		echo sprintf("\nFound %1\$d tests (split into %2\$d test plan(s))!\n", $this->testsCount, count($this->stacks));
 		echo sprintf("Going to run them %d at a time - when possible.\n", $this->maxProcesses);
 		
 		if ($this->informationOnly) {
