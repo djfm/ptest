@@ -99,6 +99,8 @@ class Runner
 			}
 		}
 
+		// die(json_encode($callStacks, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES));
+
 		return $callStacks;
 	}
 
@@ -322,7 +324,9 @@ class Runner
 			$e['class'], $e['line'], $e['file'], $e['message']
 		);
 
-		foreach ($e['trace'] as $n => $t) {
+		foreach (array_reverse($e['trace']) as $n => $t) {
+
+			$n = count($e['trace']) - $n;
 
 			$args = implode(', ', array_map('json_encode', $t['args']));
 			if (strlen($args) >= 50) {

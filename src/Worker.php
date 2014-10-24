@@ -6,7 +6,7 @@ class Worker
 {
 	private $infile;
 	private $outfile;
-
+	private $instance;
 	private $references = [];
 
 	public function __construct($infile, $outfile)
@@ -49,7 +49,7 @@ class Worker
 
 		if ($stack['before']) {
 			try {
-				$this->call($stack['before']['call']);
+				$this->call($stack['before']['call'], 'before');
 			} catch (\Exception $e) {
 				$ok = false;
 			}
@@ -67,7 +67,7 @@ class Worker
 
 		if ($stack['after']) {
 			try {
-				$this->call($stack['after']['call']);
+				$this->call($stack['after']['call'], 'after');
 			} catch (\Exception $e) {
 				if ($ok) {
 					$ok = false;
@@ -132,9 +132,9 @@ class Worker
 		$ok = true;
 
 		try {
-			$this->call($test['call']);
+			$this->call($test['call'], 'test');
 		} catch (\Exception $e) {
-			if (isset($item['expectedException']) && $e instanceof $item['expectedException']) {
+			if (isset($test['expectedException']) && $e instanceof $test['expectedException']) {
 				// that's OK
 			} else {
 				$ok = false;
@@ -160,7 +160,7 @@ class Worker
 		return $ok;
 	}
 
-	public function call($callDescription)
+	public function call($callDescription, $type)
 	{
 		list($fileName, $className, $methodName, $arguments, $isStatic) = $callDescription;
 
@@ -191,7 +191,20 @@ class Worker
 		if ($isStatic) {
 			return call_user_func_array([$className, $methodName], $args);
 		} else {
-			return call_user_func_array([new $className(), $methodName], $args);
+
+			// We renew the instance on Before or if we have none
+			if ($type === 'before' || !$this->instance) {
+				$this->instance = new $className();
+			}
+
+			$ret = call_user_func_array([$this->instance, $methodName], $args);
+
+			// We kill it on After
+			if ($type === 'after') {
+				$this->instance = null;
+			}
+
+			return $ret;
 		}
 
 	}
