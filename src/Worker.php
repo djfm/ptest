@@ -92,7 +92,7 @@ class Worker
 				// if doProcessStack returned a falsey value
 				// that is not === false, then by convention
 				// we don't retry
-				break;
+				return null;
 			}
 		}
 
@@ -109,16 +109,18 @@ class Worker
 
 	public function logException($test, \Exception $e)
 	{
+		$serializedException = [
+			'class' => get_class($e),
+			'message' => $e->getMessage(),
+			'file' => $e->getFile(),
+			'line' => $e->getLine(),
+			'trace' => $e->getTrace()
+		];
+
 		$this->sendMessage([
 			'type' => 'test-error',
 			'test' => $test,
-			'exception' => [
-				'class' => get_class($e),
-				'message' => $e->getMessage(),
-				'file' => $e->getFile(),
-				'line' => $e->getLine(),
-				'trace' => $e->getTrace()
-			]
+			'exception' => $serializedException
 		]);
 	}
 
