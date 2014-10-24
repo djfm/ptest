@@ -1,22 +1,10 @@
 #!/usr/bin/env php
 <?php
 
-$autoloads = [
-	__DIR__.'/vendor/autoload.php',
-	__DIR__.'/../../autoload.php'
-];
-
-foreach ($autoloads as $path)
-{	
-	if (file_exists($path))
-	{
-		require $path;
-		break;
-	}
-}
+require __DIR__.'/find_autoload.php';
 
 use Symfony\Component\Console\Application;
 
 $application = new Application();
-$application->add(new \PrestaShop\Ptest\Command\Runner());
+$application->add(new \PrestaShop\Ptest\Command\Run());
 $application->run();
