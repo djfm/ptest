@@ -23,6 +23,11 @@ class PHPUnitLike
 		}
 
 		$className = $file->getBasename('.php');
+
+		if (!preg_match('/Test$/', $className)) {
+			return false;
+		}
+
 		$known = get_declared_classes();
 		require $file->getPathname();
 		$new = array_diff(get_declared_classes(), $known);
