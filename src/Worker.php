@@ -197,6 +197,13 @@ class Worker
 				$this->instance = new $className();
 			}
 
+			if ($type === 'test') {
+				$aboutToStart = [$this->instance, 'aboutToStart'];
+				if (is_callable($aboutToStart)) {
+					$aboutToStart($methodName, $args);
+				}
+			}
+
 			$ret = call_user_func_array([$this->instance, $methodName], $args);
 
 			// We kill it on After
