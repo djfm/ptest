@@ -229,7 +229,6 @@ class Runner
 		$pipes = [];
 
 		file_put_contents($infile, json_encode($this->stacks[$n], JSON_PRETTY_PRINT));
-
 		$process = proc_open($cmd, $descriptorspec, $pipes);
 
 		$this->runningProcesses[] = [
@@ -302,6 +301,8 @@ class Runner
 						'statusChar' => 'E',
 						'error' => $error
 					];
+				} elseif ($message['type'] === 'exception') {
+					$this->printSerializedException($message['exception']);
 				}
 			}
 		}

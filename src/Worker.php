@@ -37,7 +37,6 @@ class Worker
 			file_get_contents($this->infile),
 			true
 		);
-
 		$ok = $this->processStack($this->stack, $logErrors = true);
 
 		return $ok ? 0 : 1;
@@ -51,6 +50,7 @@ class Worker
 			try {
 				$this->call($stack['before']['call'], 'before');
 			} catch (\Exception $e) {
+				$this->logException($e);
 				$ok = false;
 			}
 		}
@@ -70,6 +70,7 @@ class Worker
 				$this->call($stack['after']['call'], 'after');
 			} catch (\Exception $e) {
 				if ($ok) {
+					$this->logException($e);
 					$ok = false;
 				}
 			}
@@ -107,7 +108,7 @@ class Worker
 		]);
 	}
 
-	public function logException($test, \Exception $e)
+	public function logError($test, \Exception $e)
 	{
 		$serializedException = [
 			'class' => get_class($e),
@@ -120,6 +121,22 @@ class Worker
 		$this->sendMessage([
 			'type' => 'test-error',
 			'test' => $test,
+			'exception' => $serializedException
+		]);
+	}
+
+	public function logException(\Exception $e)
+	{
+		$serializedException = [
+			'class' => get_class($e),
+			'message' => $e->getMessage(),
+			'file' => $e->getFile(),
+			'line' => $e->getLine(),
+			'trace' => $e->getTrace()
+		];
+
+		$this->sendMessage([
+			'type' => 'exception',
 			'exception' => $serializedException
 		]);
 	}
@@ -150,7 +167,7 @@ class Worker
 				}
 
 				if ($logErrors) {
-					$this->logException($test, $e);
+					$this->logError($test, $e);
 				}
 			}
 		}
