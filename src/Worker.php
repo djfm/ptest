@@ -83,6 +83,10 @@ class Worker
 	{
 		$maxAttempts = isset($stack['maxAttempts']) ? (int)$stack['maxAttempts'] : 1;
 
+		if (getenv('NO_RETRY')) {
+			$maxAttempts = 1;
+		}
+
 		for ($attempt = 0; $attempt < $maxAttempts; $attempt += 1) {
 			$ok = $this->doProcessStack($stack, $logErrors = ($attempt + 1 >= $maxAttempts));
 			if ($ok) {
