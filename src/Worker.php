@@ -229,6 +229,9 @@ class Worker
 
 			$ret = call_user_func_array([$this->instance, $methodName], $args);
 
+			// Store for @depends tests!
+			$this->references[$methodName] = $ret;
+
 			// We kill it on After
 			if ($type === 'after') {
 				$this->instance = null;
