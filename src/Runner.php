@@ -109,6 +109,9 @@ class Runner
 		foreach ($callStack['stack'] as $i => $elem) {
 			if ($elem['type'] === 'test') {
 				$callStack['stack'][$i]['position'] = $this->testsCount;
+				$this->results[$this->testsCount] = [
+					'test-name' => $this->makeTestShortName($elem)
+				];
 				$this->testsCount += 1;
 			} elseif ($elem['type'] === 'stack') {
 				$this->countAndNumberTests($callStack['stack'][$i]);
@@ -174,21 +177,29 @@ class Runner
 		$unknownCount = 0;
 		$errors = [];
 
+		$statusString = '';
 		for ($p = 0; $p < $this->testsCount; $p += 1) {
-			if (isset($this->results[$p])) {
-				echo $this->results[$p]['statusChar'];
+			if (isset($this->results[$p]['statusChar'])) {
+				$statusString .= $this->results[$p]['statusChar'];
 				if (isset($this->results[$p]['error'])) {
 					$errors[] = $this->results[$p]['error'];
 				}
 			} else {
 				$unknownCount += 1;
-				echo "?";
+				$statusString .= '?';
 			}
 		}
-		echo "\n\n";
+
+		echo "$statusString\n\n";
 
 		if ($unknownCount > 0) {
-			echo "WARNING: $unknownCount tests did not yield a status, the processes probably died for some reason.\n";
+			echo "WARNING, $unknownCount tests did not yield a status, the processes probably died for some reason:\n";
+			for ($p = 0; $p < $this->testsCount; $p += 1) {
+				if (!isset($this->results[$p]['statusChar'])) {
+					echo "\t".$this->results[$p]['test-name']."\n";
+				}
+			}
+			echo "\n\n";
 		}
 
 		if (count($errors) > 0) {
@@ -205,8 +216,8 @@ class Runner
 				$this->printSerializedException($error, ">>\t\t");
 				echo "\n\n";
 			}
-		}
-		
+			echo "$statusString\n\n";
+		}		
 
 		if ($unknownCount > 0 || count($errors) > 0) {
 			return 1;
@@ -283,7 +294,7 @@ class Runner
 						$this->getProgressString()
 					);
 
-					$this->results[$message['test']['position']] = ['statusChar' => '.'];
+					$this->results[$message['test']['position']]['statusChar'] = '.';
 
 				} elseif ($message['type'] === 'test-error') {
 					$this->testsFinishedCount += 1;
@@ -297,10 +308,8 @@ class Runner
 
 					$error = $message['exception'];
 					$error['test-name'] = $this->makeTestShortName($message['test']);
-					$this->results[$message['test']['position']] = [
-						'statusChar' => 'E',
-						'error' => $error
-					];
+					$this->results[$message['test']['position']]['statusChar'] = 'E';
+					$this->results[$message['test']['position']]['error'] = $error;
 				} elseif ($message['type'] === 'exception') {
 					$this->printSerializedException($message['exception']);
 				}
