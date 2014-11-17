@@ -41,6 +41,10 @@ class Run extends Command
             $input->getArgument('test_class_or_directory')
         );
 
+        $runner->setFilter(
+            $input->getOption('filter')
+        );
+
         $runner->setDataProviderFilter(
             $input->getOption('data-provider-filter')
         );

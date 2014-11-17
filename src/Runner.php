@@ -17,6 +17,8 @@ class Runner
 
 	private $maxProcesses = 1;
 
+	private $filter;
+
 	private $dataProviderFilter;
 
 	private $informationOnly = false;
@@ -35,6 +37,7 @@ class Runner
 		$this->loaders[] = $phpunit;
 
 		foreach ($this->loaders as $loader) {
+			$loader->setFilter($this->filter);
 			$loader->setDataProviderFilter($this->dataProviderFilter);
 		}
 	}
@@ -42,22 +45,30 @@ class Runner
 	public function setMaxProcesses($p)
 	{
 		$this->maxProcesses = $p;
+		return $this;
+	}
+
+	public function setFilter($filter)
+	{
+		$this->filter = $filter;
+		return $this;
 	}
 
 	public function setDataProviderFilter($z)
 	{
 		$this->dataProviderFilter = $z;
+		return $this;
 	}
 
 	public function setInformationOnly($yes = false)
 	{
 		$this->informationOnly = $yes;
+		return $this;
 	}
 
 	public function setRoot($root)
 	{
 		$this->root = $root;
-
 		return $this;
 	}
 

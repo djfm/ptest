@@ -9,11 +9,19 @@ use PrestaShop\Ptest\Helper\DocCommentParser;
 
 class PHPUnitLike
 {
+	private $filter;
 	private $dataProviderFilter = array();
 
 	public function setDataProviderFilter($filter)
 	{
 		$this->dataProviderFilter = $filter;
+		return $this;
+	}
+
+	public function setFilter($filter)
+	{
+		$this->filter = $filter;
+		return $this;
 	}
 
 	public function load(\SplFileInfo $file)
@@ -57,6 +65,28 @@ class PHPUnitLike
 
 		foreach ($refl->getMethods(\ReflectionMethod::IS_PUBLIC) as $method) {
 			if (preg_match('/^test/', $method->getName())) {
+
+				$filter = $this->filter;
+
+				if (is_string($filter) && trim($filter) !== '') {
+					$matchAgainst = "$className::{$method->getName()}";
+					$needsQuoting = false;
+
+					$fc = [];
+					if (preg_match('/^\W/', $filter, $fc)) {
+						$fc = $fc[0];
+						$notfc = $fc === '/' ? '#' : '/';
+
+						if (!preg_match($notfc.$fc.'[iU]*$'.$notfc, $filter)) {
+							$filter = $notfc.$filter.$notfc;
+						}
+					} else {
+						$filter = "/$filter/";
+					}
+					if (!preg_match($filter, $matchAgainst)) {
+						continue;
+					}
+				}
 
 				$test = new SingleTest($method->getName());
 				$test
