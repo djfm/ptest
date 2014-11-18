@@ -108,8 +108,20 @@ class Worker
 	{
 		$this->sendMessage([
 			'type' => 'test-success',
-			'test' => $test
+			'test' => $test,
+			'artefacts-dir' => $this->getArtefactsDir()
 		]);
+	}
+
+	public function getArtefactsDir()
+	{
+		$artefactsDir = [$this->instance, 'getArtefactsDir'];
+
+		if ($this->instance && is_callable($artefactsDir)) {
+			return $artefactsDir();
+		} else {
+			return null;
+		}
 	}
 
 	public function logError($test, \Exception $e)
@@ -125,6 +137,7 @@ class Worker
 		$this->sendMessage([
 			'type' => 'test-error',
 			'test' => $test,
+			'artefacts-dir' => $this->getArtefactsDir(),
 			'exception' => $serializedException
 		]);
 	}

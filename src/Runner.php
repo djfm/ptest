@@ -305,6 +305,14 @@ class Runner
 						$this->getProgressString()
 					);
 
+					if (!empty($message['artefacts-dir'])) {
+						$errorFile = $message['artefacts-dir'].'/error.txt';
+						if (file_exists($errorFile)) {
+							@unlink($errorFile);
+						}
+						@file_put_contents($message['artefacts-dir'].'/ok.txt', 'OK! '.date('d M Y h:i:s'));
+					}
+
 					$this->results[$message['test']['position']]['statusChar'] = '.';
 
 				} elseif ($message['type'] === 'test-error') {
@@ -316,6 +324,18 @@ class Runner
 					);
 					$this->printSerializedException($message['exception']);
 					echo "\n";
+
+					if (!empty($message['artefacts-dir'])) {
+						$successFile = $message['artefacts-dir'].'/ok.txt';
+						if (file_exists($successFile)) {
+							@unlink($successFile);
+						}
+						$exception = Helper\ExceptionFormatter::formatSerializedException(
+							$message['exception'],
+							''
+						);
+						@file_put_contents($message['artefacts-dir'].'/error.txt', $exception);
+					}
 
 					$error = $message['exception'];
 					$error['test-name'] = $this->makeTestShortName($message['test']);
