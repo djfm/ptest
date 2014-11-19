@@ -107,9 +107,9 @@ class Worker
 	public function logSuccess($test)
 	{
 		$this->sendMessage([
-			'type' => 'test-success',
+			'type' => 'testSuccess',
 			'test' => $test,
-			'artefacts-dir' => $this->getArtefactsDir()
+			'artefactsDir' => $this->getArtefactsDir()
 		]);
 	}
 
@@ -135,9 +135,9 @@ class Worker
 		];
 
 		$this->sendMessage([
-			'type' => 'test-error',
+			'type' => 'testError',
 			'test' => $test,
-			'artefacts-dir' => $this->getArtefactsDir(),
+			'artefactsDir' => $this->getArtefactsDir(),
 			'exception' => $serializedException
 		]);
 	}
@@ -168,7 +168,7 @@ class Worker
 		$ok = true;
 
 		try {
-			$this->call($test['call'], 'test');
+			$this->call($test['call'], 'test', $test);
 		} catch (\Exception $e) {
 			if (isset($test['expectedException']) && $e instanceof $test['expectedException']) {
 				// that's OK
@@ -196,7 +196,7 @@ class Worker
 		return $ok;
 	}
 
-	public function call($callDescription, $type)
+	public function call($callDescription, $type, $data = null)
 	{
 		list($fileName, $className, $methodName, $arguments, $isStatic) = $callDescription;
 
@@ -238,6 +238,12 @@ class Worker
 				if (is_callable($aboutToStart)) {
 					$aboutToStart($methodName, $args);
 				}
+
+				$this->sendMessage([
+					'type' => 'testStart',
+					'test' => $data,
+					'artefactsDir' => $this->getArtefactsDir(),
+				]);
 			}
 
 			$ret = call_user_func_array([$this->instance, $methodName], $args);

@@ -11,6 +11,7 @@ class ExceptionFormatter
 			$e['class'], $e['line'], $e['file'], $e['message']
 		);
 
+		$skipped = 0;
 		foreach (array_reverse($e['trace']) as $n => $t) {
 
 			$n = count($e['trace']) - $n;
@@ -22,19 +23,33 @@ class ExceptionFormatter
 
 			$fun = $t['function'].'('.$args.')';
 			if (isset($t['class'])) {
+				// Not intersted in tedious internal details
+				if ($t['class'] === 'PrestaShop\Ptest\Worker') {
+					++$skipped;
+					continue;
+				}
 				$fun = $t['class'].$t['type'].$fun;
+			}
+
+			if ($n === 1) {
+				if ($skipped > 0) {
+					$out .= sprintf("$padding\t     [skipped %d unintersting frames]\n", $skipped);
+				}
+				$bullet = '[E]';
+			} else {
+				$bullet = '[.]';
 			}
 
 			if (isset($t['file']) && isset($t['line'])) {
 				$out .= sprintf(
-					"$padding\t%d) At %s:%s in %s\n",
-					$n,
+					"$padding\t%s At %s:%s in %s\n",
+					$bullet,
 					$t['file'], $t['line'], $fun
 				);
 			} else {
 				$out .= sprintf(
-					"$padding\t%d) In %s\n",
-					$n, $fun
+					"$padding\t%s In %s\n",
+					$bullet, $fun
 				);
 			}
 		}

@@ -120,9 +120,17 @@ class Runner
 		foreach ($callStack['stack'] as $i => $elem) {
 			if ($elem['type'] === 'test') {
 				$callStack['stack'][$i]['position'] = $this->testsCount;
+
 				$this->results[$this->testsCount] = [
-					'test-name' => $this->makeTestShortName($elem)
+					'testName' => $this->makeTestShortName($elem),
+					'testClass' => $elem['call'][1],
+					'testMethod' => $elem['call'][2]
 				];
+
+				if (isset($elem['call'][3])) {
+					$this->results[$this->testsCount]['testArguments'] = $elem['call'][3];
+				}
+
 				$this->testsCount += 1;
 			} elseif ($elem['type'] === 'stack') {
 				$this->countAndNumberTests($callStack['stack'][$i]);
@@ -207,7 +215,7 @@ class Runner
 			echo "WARNING, $unknownCount tests did not yield a status, the processes probably died for some reason:\n";
 			for ($p = 0; $p < $this->testsCount; $p += 1) {
 				if (!isset($this->results[$p]['statusChar'])) {
-					echo "\t".$this->results[$p]['test-name']."\n";
+					echo "\t".$this->results[$p]['testName']."\n";
 				}
 			}
 			echo "\n\n";
@@ -222,13 +230,22 @@ class Runner
 				echo sprintf(
 					"%d) %s:\n\n",
 					$n + 1,
-					$error['test-name']
+					$error['testName']
 				);
 				$this->printSerializedException($error, ">>\t\t");
 				echo "\n\n";
 			}
 			echo "$statusString\n\n";
-		}		
+		}
+
+		$jsonResults = json_encode($this->results, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE);
+
+		$statsDir = 'test-stats';
+		if (!is_dir($statsDir)) {
+			mkdir($statsDir, 0777, true);
+		}
+		$statsFile = $statsDir.'/'.date("d M Y h.i.s").'_'.md5($jsonResults).'.json';
+		file_put_contents($statsFile, $jsonResults);
 
 		if ($unknownCount > 0 || count($errors) > 0) {
 			return 1;
@@ -282,6 +299,81 @@ class Runner
 		);
 	}
 
+	public function handleLog($process, $message)
+	{
+		if (is_string($message)) {
+			echo sprintf("::: Process %'04d says: %s\n", $process['position'] + 1, $message);
+		} else {
+			echo sprintf(
+				"::: Process %'04d says:\n%s\n\n", $process['position'] + 1,
+				json_encode($message, JSON_PRETTY_PRINT)
+			);
+		}
+	}
+
+	public function handleTestStartMessage($process, $message)
+	{
+		$position = $message['test']['position'];
+
+		$this->results[$position]['startedAt'] = time();
+		$this->results[$position]['artefactsDir'] = $message['artefactsDir'];
+	}
+
+	public function handleTestSuccessMessage($process, $message)
+	{
+		$this->testsFinishedCount += 1;
+		echo sprintf(
+			"\n:-) Test %s completed with success! (%s)\n\n",
+			$this->makeTestShortName($message['test']),
+			$this->getProgressString()
+		);
+
+		if (!empty($message['artefactsDir'])) {
+			$errorFile = $message['artefactsDir'].'/error.txt';
+			if (file_exists($errorFile)) {
+				@unlink($errorFile);
+			}
+			@file_put_contents($message['artefactsDir'].'/ok.txt', 'OK! '.date('d M Y h:i:s'));
+		}
+
+		$position = $message['test']['position'];
+		$this->results[$position]['statusChar'] = '.';
+		$this->results[$position]['finishedAt'] = time();
+	}
+
+	public function handleTestErrorMessage($process, $message)
+	{
+		$this->testsFinishedCount += 1;
+		echo sprintf(
+			"\n:+( Test %s failed! (%s)\n",
+			$this->makeTestShortName($message['test']),
+			$this->getProgressString()
+		);
+		$this->printSerializedException($message['exception']);
+		echo "\n";
+
+		if (!empty($message['artefactsDir'])) {
+			$successFile = $message['artefactsDir'].'/ok.txt';
+			if (file_exists($successFile)) {
+				@unlink($successFile);
+			}
+			$exception = Helper\ExceptionFormatter::formatSerializedException(
+				$message['exception'],
+				''
+			);
+			@file_put_contents($message['artefactsDir'].'/error.txt', $exception);
+		}
+
+		$error = $message['exception'];
+		$error['testName'] = $this->makeTestShortName($message['test']);
+		
+		$position = $message['test']['position'];
+
+		$this->results[$position]['statusChar'] = 'E';
+		$this->results[$position]['error'] = $error;
+		$this->results[$position]['finishedAt'] = time();
+	}
+
 	public function handleMessage($process, $message)
 	{
 		if (is_scalar($message)) {
@@ -289,58 +381,13 @@ class Runner
 		} else {
 			if (isset($message['type'])) {
 				if ($message['type'] === 'log') {
-					if (is_string($message['message'])) {
-						echo sprintf("::: Process %'04d says: %s\n", $process['position'] + 1, $message['message']);
-					} else {
-						echo sprintf(
-							"::: Process %'04d says:\n%s\n\n", $process['position'] + 1,
-							json_encode($message['message'], JSON_PRETTY_PRINT)
-						);
-					}
-				} elseif ($message['type'] === 'test-success') {
-					$this->testsFinishedCount += 1;
-					echo sprintf(
-						"\n:-) Test %s completed with success! (%s)\n\n",
-						$this->makeTestShortName($message['test']),
-						$this->getProgressString()
-					);
-
-					if (!empty($message['artefacts-dir'])) {
-						$errorFile = $message['artefacts-dir'].'/error.txt';
-						if (file_exists($errorFile)) {
-							@unlink($errorFile);
-						}
-						@file_put_contents($message['artefacts-dir'].'/ok.txt', 'OK! '.date('d M Y h:i:s'));
-					}
-
-					$this->results[$message['test']['position']]['statusChar'] = '.';
-
-				} elseif ($message['type'] === 'test-error') {
-					$this->testsFinishedCount += 1;
-					echo sprintf(
-						"\n:+( Test %s failed! (%s)\n",
-						$this->makeTestShortName($message['test']),
-						$this->getProgressString()
-					);
-					$this->printSerializedException($message['exception']);
-					echo "\n";
-
-					if (!empty($message['artefacts-dir'])) {
-						$successFile = $message['artefacts-dir'].'/ok.txt';
-						if (file_exists($successFile)) {
-							@unlink($successFile);
-						}
-						$exception = Helper\ExceptionFormatter::formatSerializedException(
-							$message['exception'],
-							''
-						);
-						@file_put_contents($message['artefacts-dir'].'/error.txt', $exception);
-					}
-
-					$error = $message['exception'];
-					$error['test-name'] = $this->makeTestShortName($message['test']);
-					$this->results[$message['test']['position']]['statusChar'] = 'E';
-					$this->results[$message['test']['position']]['error'] = $error;
+					$this->handleLog($process, $message['message']);
+				} elseif ($message['type'] === 'testStart') {
+					$this->handleTestStartMessage($process, $message);
+				} elseif ($message['type'] === 'testSuccess') {
+					$this->handleTestSuccessMessage($process, $message);
+				} elseif ($message['type'] === 'testError') {
+					$this->handleTestErrorMessage($process, $message);
 				} elseif ($message['type'] === 'exception') {
 					$this->printSerializedException($message['exception']);
 				}
