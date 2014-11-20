@@ -92,7 +92,7 @@ class Worker
 			if ($ok) {
 				return true;
 			} elseif ($ok === false) {
-				$this->log('Retrying current stack...');
+				$this->log('Retrying current stack because of error...');
 			} else {
 				// if doProcessStack returned a falsey value
 				// that is not === false, then by convention
@@ -183,6 +183,8 @@ class Worker
 					$ok = null;
 				}
 
+				$this->logException($e);
+				
 				if ($logErrors) {
 					$this->logError($test, $e);
 				}
