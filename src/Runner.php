@@ -238,14 +238,42 @@ class Runner
 			echo "$statusString\n\n";
 		}
 
+		/**
+		 * Save statistics
+		 */
+
 		$jsonResults = json_encode($this->results, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE);
 
 		$statsDir = 'test-stats';
 		if (!is_dir($statsDir)) {
 			mkdir($statsDir, 0777, true);
 		}
-		$statsFile = $statsDir.'/'.date("d M Y h.i.s").'_'.md5($jsonResults).'.json';
+		$token = date("d M Y h.i.s").'_'.md5($jsonResults);
+		$statsFile = $statsDir.'/'.$token.'.json';
 		file_put_contents($statsFile, $jsonResults);
+
+		/**
+		 * Save screencasts of errors if available
+		 */
+		foreach ($this->results as $position => $data) {
+			if (empty($data['error'])) {
+				continue;
+			}
+
+			if (empty($data['artefactsDir'])) {
+				continue;
+			}
+
+			$screenshotsDir = $data['artefactsDir'].DIRECTORY_SEPARATOR.'screenshots';
+			
+			if (!is_dir($screenshotsDir)) {
+				continue;
+			}
+
+			$screenshotsBackupDir = 'test-stats/screenshots/'.$token.'_'.$position;
+
+			Helper\FileSystem::cpr($screenshotsDir, $screenshotsBackupDir);
+		}
 
 		if ($unknownCount > 0 || count($errors) > 0) {
 			return 1;
