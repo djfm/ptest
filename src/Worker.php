@@ -101,6 +101,8 @@ class Worker
 			}
 		}
 
+		$this->log('No more attempts allowed, sry.');
+
 		return false;
 	}
 

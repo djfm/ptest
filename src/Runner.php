@@ -179,109 +179,6 @@ class Runner
 		return $this->afterRun();
 	}
 
-	public function afterRun()
-	{
-		$elapsed = time() - $this->startedAt;
-		$minutes = floor($elapsed / 60);
-		$seconds = $elapsed - 60 * $minutes;
-
-
-		echo sprintf(
-			"\n\nFinished %d tests in %d minutes and %d seconds.\n",
-			$this->testsCount,
-			$minutes,
-			$seconds
-		);
-
-		$unknownCount = 0;
-		$errors = [];
-
-		$statusString = '';
-		for ($p = 0; $p < $this->testsCount; $p += 1) {
-			if (isset($this->results[$p]['statusChar'])) {
-				$statusString .= $this->results[$p]['statusChar'];
-				if (isset($this->results[$p]['error'])) {
-					$errors[] = $this->results[$p]['error'];
-				}
-			} else {
-				$unknownCount += 1;
-				$statusString .= '?';
-			}
-		}
-
-		echo "$statusString\n\n";
-
-		if ($unknownCount > 0) {
-			echo "WARNING, $unknownCount tests did not yield a status, the processes probably died for some reason:\n";
-			for ($p = 0; $p < $this->testsCount; $p += 1) {
-				if (!isset($this->results[$p]['statusChar'])) {
-					echo "\t".$this->results[$p]['testName']."\n";
-				}
-			}
-			echo "\n\n";
-		}
-
-		if (count($errors) > 0) {
-			echo sprintf(
-				"ATTENTION: there were %d error(s)!\n\n",
-				count($errors)
-			);
-			foreach ($errors as $n => $error) {
-				echo sprintf(
-					"%d) %s:\n\n",
-					$n + 1,
-					$error['testName']
-				);
-				$this->printSerializedException($error, ">>\t\t");
-				echo "\n\n";
-			}
-			echo "$statusString\n\n";
-		}
-
-		/**
-		 * Save statistics
-		 */
-
-		$jsonResults = json_encode($this->results, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE);
-
-		$statsDir = 'test-stats';
-		if (!is_dir($statsDir)) {
-			mkdir($statsDir, 0777, true);
-		}
-		$token = date("d M Y h.i.s").'_'.md5($jsonResults);
-		$statsFile = $statsDir.'/'.$token.'.json';
-		file_put_contents($statsFile, $jsonResults);
-
-		/**
-		 * Save screencasts of errors if available
-		 */
-		foreach ($this->results as $position => $data) {
-			if (empty($data['error'])) {
-				continue;
-			}
-
-			if (empty($data['artefactsDir'])) {
-				continue;
-			}
-
-			$screenshotsDir = $data['artefactsDir'].DIRECTORY_SEPARATOR.'screenshots';
-			
-			if (!is_dir($screenshotsDir)) {
-				continue;
-			}
-
-			$screenshotsBackupDir = 'test-stats/screenshots/'.$token.'_'.$position;
-
-			Helper\FileSystem::cpr($screenshotsDir, $screenshotsBackupDir);
-		}
-
-		if ($unknownCount > 0 || count($errors) > 0) {
-			return 1;
-		} else {
-			return 0;
-		}
-	}
-
 	public function startProcess($n)
 	{
 		echo '>>> Starting process '.($n+1).' of '.count($this->stacks)."!\n";
@@ -310,7 +207,7 @@ class Runner
 	{
 		if(isset($test['call'][3])) {
 			$args = array_map(function($v) {
-				return isset($v['value']) ? json_encode($v['value']) : $v['reference'];
+				return isset($v['value']) ? json_encode($v['value'], JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES) : $v['reference'];
 			}, $test['call'][3]);
 
 			$args = implode(', ', $args);
@@ -473,6 +370,116 @@ class Runner
 				echo "<<< Subprocess ".($process['position'] + 1)." finished! $code\n";
 				unset($this->runningProcesses[$n]);
 			}
+		}
+	}
+
+	public function afterRun()
+	{
+		$elapsed = time() - $this->startedAt;
+		$minutes = floor($elapsed / 60);
+		$seconds = $elapsed - 60 * $minutes;
+
+
+		echo sprintf(
+			"\n\nFinished %d tests in %d minutes and %d seconds.\n",
+			$this->testsCount,
+			$minutes,
+			$seconds
+		);
+
+		$unknownCount = 0;
+		$errors = [];
+
+		$statusString = '';
+		for ($p = 0; $p < $this->testsCount; $p += 1) {
+			if (isset($this->results[$p]['statusChar'])) {
+				$statusString .= $this->results[$p]['statusChar'];
+				if (isset($this->results[$p]['error'])) {
+					$errors[] = $this->results[$p]['error'];
+				}
+			} else {
+				$unknownCount += 1;
+				$statusString .= '?';
+			}
+		}
+
+		echo "$statusString\n\n";
+
+		if ($unknownCount > 0) {
+			echo "WARNING, $unknownCount tests did not yield a status, the processes probably died for some reason:\n";
+			for ($p = 0; $p < $this->testsCount; $p += 1) {
+				if (!isset($this->results[$p]['statusChar'])) {
+					echo "\t".$this->results[$p]['testName']."\n";
+				}
+			}
+			echo "\n\n";
+		}
+
+		if (count($errors) > 0) {
+			echo sprintf(
+				"ATTENTION: there were %d error(s)!\n\n",
+				count($errors)
+			);
+			foreach ($errors as $n => $error) {
+				echo sprintf(
+					"%d) %s:\n\n",
+					$n + 1,
+					$error['testName']
+				);
+				$this->printSerializedException($error, ">>\t\t");
+				echo "\n\n";
+			}
+			echo "$statusString\n\n";
+		}
+
+		/**
+		 * Save statistics
+		 */
+
+		$jsonResults = json_encode($this->results, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE);
+
+		$historyDir = 'test-history';
+		if (!is_dir($historyDir)) {
+			mkdir($historyDir, 0777, true);
+		}
+		$token = date("d M Y h.i.s").'_'.md5($jsonResults);
+		$statsFile = $historyDir.'/'.$token.'.json';
+		file_put_contents($statsFile, $jsonResults);
+
+
+		/**
+		 * Save screencasts of errors if available
+		 */
+		foreach ($this->results as $position => $data) {
+			
+			if (empty($data['artefactsDir'])) {
+				continue;
+			}
+
+			$backupDir = $historyDir.'/'.$token.'_'.$position;
+
+			Helper\FileSystem::cpr($data['artefactsDir'], $backupDir);
+
+			// Compress screenshots
+			$screenshotsDir = $backupDir.'/screenshots';
+			if (is_dir($screenshotsDir)) {
+				foreach (scandir($screenshotsDir) as $entry) {
+					if (preg_match('/\.png$/', $entry)) {
+						$screenshotPng = $screenshotsDir.'/'.$entry;
+						$screenshotJpg = $screenshotsDir.'/'.basename($entry, '.png').'.jpg';
+						$image = imagecreatefrompng($screenshotPng);
+					    imagejpeg($image, $screenshotJpg, 50);
+					    imagedestroy($image);
+					    unlink($screenshotPng);
+					}
+				}
+			}
+		}
+
+		if ($unknownCount > 0 || count($errors) > 0) {
+			return 1;
+		} else {
+			return 0;
 		}
 	}
 }
